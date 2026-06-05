@@ -306,7 +306,7 @@ const PDFAnalyzer = (() => {
 
     // Try to find numbered entries: N)name or N) name
     // We'll look for pairs: number, closing paren, then text name
-    const roomPattern = /(\d+)\s*\)\s*([\wа-яА-ЯёЁүҮіІңҢəƏқҚғҒ\s]+?)(?=\d+\s*\)|\d[\d.]*\s*(?:м²|кв\.м)|$)/gi;
+    const roomPattern = /(\d+)\s*[.)][\s\d.,]*([\wа-яА-ЯёЁүҮіІңҢəƏқҚғҒ\s]+?)(?=\d+\s*[.)]|\d[\d.]*\s*(?:м²|кв\.м)|$)/gi;
     let m;
     const tempRooms = [];
 
@@ -419,7 +419,7 @@ const PDFAnalyzer = (() => {
     // "6.711.8 11.8 6.7 1)дəліз коридор 6)ас бөлме кухня 12.11.3 1.3 2)гардероб..."
 
     // Extract numbers followed by ) and text
-    const entryRegex = /(\d{1,2})\s*\)\s*([а-яА-ЯёЁүҮіІңҢəƏқҚғҒa-zA-Z\s\(\),.]+?)(?=\d{1,2}\s*\)|\d{2,3}\.|\d+\s*\.\s*\d|$)/gi;
+    const entryRegex = /(\d{1,2})\s*[.)][\s\d.,]*([а-яА-ЯёЁүҮіІңҢəƏқҚғҒa-zA-Z\s\(\),.]+?)(?=\d{1,2}\s*[.)]|\d{2,3}\.|\d+\s*\.\s*\d|$)/gi;
     let em;
     const entries = [];
     while ((em = entryRegex.exec(section)) !== null) {
@@ -537,7 +537,7 @@ const PDFAnalyzer = (() => {
     // Step 1: Find all IDs and their names by looking for "1) Name" or "1 ) Name"
     // We strictly include all Kazakh and Russian characters.
     // Use (?:^|[^\d.,]) to prevent matching "5)" inside "0,5)"
-    const entryRegex = /(?:^|[^\d.,])(\d{1,2})\s*\)\s*([а-яА-ЯёЁүҮіІңҢəƏқҚғҒұҰөӨa-zA-Z\s\(\)/,-]+)/gi;
+    const entryRegex = /(?:^|[^\d.,])(\d{1,2})\s*[.)][\s\d.,]*([а-яА-ЯёЁүҮіІңҢəƏқҚғҒұҰөӨa-zA-Z][а-яА-ЯёЁүҮіІңҢəƏқҚғҒұҰөӨa-zA-Z\s\(\)/,-]*)/gi;
     const entries = [...text.matchAll(entryRegex)];
     
     if (entries.length === 0) return null;
