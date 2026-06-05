@@ -745,8 +745,56 @@
     // Hide verification panel
     missingFieldsSection.style.display = 'none';
 
-    // Show results
-    renderRoomGallery(base, ranked);
+    // Show technical drawing step instead of results immediately
+    showTechnicalDrawingStep(base, ranked);
+  }
+
+  /* ════════════════════════════════════════════════════════
+     STEP 2.5 — TECHNICAL DRAWING VERIFICATION
+  ════════════════════════════════════════════════════════ */
+  function showTechnicalDrawingStep(metrics, ranked) {
+    let planImgHtml = '';
+    if (currentPdfCanvas) {
+      try {
+        const dataUrl = currentPdfCanvas.toDataURL('image/png');
+        planImgHtml = `<img src="${dataUrl}" style="max-width: 100%; max-height: 500px; opacity: 0.9; filter: contrast(1.1) grayscale(100%); border-radius: 8px;" alt="Технический чертеж">`;
+      } catch(e) {}
+    }
+
+    if (!planImgHtml) {
+       planImgHtml = '<div style="font-size: 48px; margin-bottom: 20px;">🏗️</div><div style="color: var(--teal); font-weight: 600;">Генерация чертежа...</div>';
+    }
+
+    analysisResults.innerHTML = `
+      <div class="verify-panel" style="margin-top: 20px;">
+        <div class="verify-header">
+          <div class="verify-header-icon">📐</div>
+          <div>
+            <div class="verify-header-title">Шаг 2.5 — Проверка технического чертежа</div>
+            <p class="verify-header-sub">
+              Мы проанализировали конфигурацию и геометрические размеры вашей квартиры. Ниже представлен технический чертеж в упрощенном формате. Пожалуйста, проверьте соответствие расположения комнат и проемов.
+            </p>
+          </div>
+        </div>
+        
+        <div class="plan-canvas-display" style="margin-top: 20px; text-align: center; border: 2px dashed rgba(255,255,255,0.2); border-radius: 12px; padding: 20px; background: rgba(0,0,0,0.2);">
+             ${planImgHtml}
+        </div>
+
+        <div style="margin-top: 30px; text-align: center;">
+          <button class="plan-editor-confirm-btn" id="approveDrawingBtn" style="font-size: 1.1rem; padding: 16px 32px;">
+            ✅ Чертеж подтверждаю. Показать визуализации комнат
+          </button>
+        </div>
+      </div>
+    `;
+    
+    analysisResults.classList.add('show');
+    analysisResults.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    document.getElementById('approveDrawingBtn').addEventListener('click', () => {
+      renderRoomGallery(metrics, ranked);
+    });
   }
 
   /* ════════════════════════════════════════════════════════
@@ -952,9 +1000,18 @@
       const styleData = ROOM_GALLERY[styleKey] || ROOM_GALLERY.minimalism;
       let roomSections = '';
 
-      roomList.forEach(room => {
+      let freeRoomRendered = false;
+
+      roomList.forEach((room, index) => {
         let imgs = styleData[room.key] || [];
         
+        // Freemium logic: First living room (or first room if no living room exists) is free. The rest are locked.
+        let isFree = false;
+        if (!freeRoomRendered && (room.type === 'living' || room.type === 'bedroom' || index === 0)) {
+           isFree = true;
+           freeRoomRendered = true; // Mark that we've given the free room
+        }
+
         // Check if room requires 1 or 2 images based on user request
         const isSingleImage = ['bathroom', 'hallway', 'wardrobe', 'balcony', 'loggia'].includes(room.type);
         const gridClass = isSingleImage ? 'room-images-single' : 'room-images-pair';
@@ -963,29 +1020,56 @@
 
         const areaStr = room.area > 0 ? ` — ${room.area.toFixed(1)} м²` : '';
 
-        roomSections += `
-          <div class="room-section">
-            <div class="room-section-header">
-              <div class="room-section-icon">${room.icon}</div>
-              <div>
-                <div class="room-section-title">${room.label}${areaStr}</div>
-                <div class="room-section-sub">
-                  ${getRoomHint(room.key, styleKey, metrics)}
+        if (isFree) {
+          roomSections += `
+            <div class="room-section">
+              <div class="room-section-header">
+                <div class="room-section-icon">${room.icon}</div>
+                <div>
+                  <div class="room-section-title">${room.label}${areaStr}</div>
+                  <div class="room-section-sub">
+                    ${getRoomHint(room.key, styleKey, metrics)}
+                  </div>
+                </div>
+                <div class="room-section-style-tag">${rankedItem?.label || styleKey}</div>
+              </div>
+              <div class="${gridClass}">
+                ${imgs.length > 0 ? imgs.map((img, i) => `
+                  <div class="room-img-wrap">
+                    <img src="${img.url}" alt="${img.label}" loading="lazy"
+                         onerror="this.parentElement.style.display='none'">
+                    <div class="room-img-label">${img.label}</div>
+                  </div>`).join('') : `
+                  <div class="room-img-wrap" style="display:flex;align-items:center;justify-content:center;min-height:120px;opacity:0.4;font-size:2rem">${room.icon}</div>
+                `}
+              </div>
+            </div>`;
+        } else {
+          roomSections += `
+            <div class="room-section room-locked" style="opacity: 0.9;">
+              <div class="room-section-header" style="opacity: 0.6;">
+                <div class="room-section-icon">${room.icon}</div>
+                <div>
+                  <div class="room-section-title">${room.label}${areaStr} <span style="font-size: 0.8rem; background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px; margin-left: 8px;">🔒 Премиум</span></div>
+                  <div class="room-section-sub">Рендер для данного помещения предоставляется по запросу</div>
                 </div>
               </div>
-              <div class="room-section-style-tag">${rankedItem?.label || styleKey}</div>
-            </div>
-            <div class="${gridClass}">
-              ${imgs.length > 0 ? imgs.map((img, i) => `
-                <div class="room-img-wrap">
-                  <img src="${img.url}" alt="${img.label}" loading="lazy"
-                       onerror="this.parentElement.style.display='none'">
-                  <div class="room-img-label">${img.label}</div>
-                </div>`).join('') : `
-                <div class="room-img-wrap" style="display:flex;align-items:center;justify-content:center;min-height:120px;opacity:0.4;font-size:2rem">${room.icon}</div>
-              `}
-            </div>
-          </div>`;
+              <div style="margin-top: 15px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 30px; text-align: center; position: relative; overflow: hidden;">
+                <div style="position: absolute; top: -10px; left: -10px; right: -10px; bottom: -10px; background-image: url('${imgs[0] ? imgs[0].url : ''}'); background-size: cover; background-position: center; filter: blur(15px) brightness(0.4); z-index: 0;"></div>
+                <div style="position: relative; z-index: 1;">
+                  <div style="font-size: 32px; margin-bottom: 10px;">💎</div>
+                  <h4 style="margin: 0 0 10px; color: #fff;">Дизайн-проект этого помещения</h4>
+                  <p style="color: rgba(255,255,255,0.7); font-size: 0.95rem; margin: 0 0 20px; max-width: 450px; display: inline-block;">
+                    Закажите детальную 3D визуализацию, подбор материалов и мебели в выбранном стиле для этой комнаты.
+                  </p>
+                  <br>
+                  <button class="btn btn-primary" onclick="alert('Переход к заказу рендера (от 4 990 ₸)')" style="background: var(--teal); color: #000; font-weight: 600; border: none; padding: 12px 28px; border-radius: 8px; cursor: pointer; transition: 0.2s;">
+                    Заказать рендер от 4 990 ₸
+                  </button>
+                </div>
+              </div>
+            </div>`;
+        }
       });
 
       wrapEl.innerHTML = `

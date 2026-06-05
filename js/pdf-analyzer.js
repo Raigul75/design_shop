@@ -497,10 +497,10 @@ const PDFAnalyzer = (() => {
       while ((m = idxPattern.exec(section)) !== null) {
         // Look for a decimal number in the ±80 chars around this position
         const ctx = section.slice(Math.max(0, m.index - 60), m.index + 60);
-        const numMatches = [...ctx.matchAll(/\b(\d{1,2}\.\d)\b/g)];
+        const numMatches = [...ctx.matchAll(/\b(\d{1,2}[\.,]\d)\b/g)];
         if (numMatches.length > 0) {
           // Use the number closest to the start of context (i.e., closest left)
-          const val = parseFloat(numMatches[numMatches.length - 1][1]);
+          const val = parseFloat(numMatches[numMatches.length - 1][1].replace(',', '.'));
           if (val >= 1.0 && val <= 99.0) {
             areaMap[entry.id] = val;
           }
@@ -568,21 +568,11 @@ const PDFAnalyzer = (() => {
       }
     });
 
-    // Step 2: Extract all areas and try to map them if possible
-    rooms.forEach((room, idx) => {
-      const nextRoom = rooms[idx + 1];
-      // Search from this room's text until the next room's text
-      const searchCtx = text.slice(room.index, nextRoom ? nextRoom.index : room.index + 150);
-      const numMatches = [...searchCtx.matchAll(/\b(\d{1,2}[\.,]\d)\b/g)];
-      
-      if (numMatches.length > 0) {
-        for (const nm of numMatches) {
-          const val = parseFloat(nm[1].replace(',', '.'));
-          if (val >= 1.0 && val <= 50.0) {
-            room.area = val;
-            break;
-          }
-        }
+    // Step 2: Extract all areas and try to map them using bidirectional context
+    const areaMap = extractRoomAreasFromText(text, rooms);
+    rooms.forEach(room => {
+      if (areaMap[room.id]) {
+        room.area = areaMap[room.id];
       }
     });
 
