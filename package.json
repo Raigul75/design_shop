@@ -1,0 +1,13 @@
+{
+  "name": "design_shop",
+  "version": "1.0.0",
+  "description": "Design Shop Project",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}

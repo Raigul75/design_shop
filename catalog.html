@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Каталог услуг — DesignPro</title>
+  <meta name="description" content="Каталог услуг по дизайну интерьеров и ремонту квартир. Однокомнатные, двухкомнатные, трехкомнатные и четырехкомнатные квартиры. Фильтрация по стилю и цене.">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/plan-uploader.css">
+  <link rel="stylesheet" href="css/plan-editor.css">
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar" id="navbar">
+  <div class="container">
+    <div class="navbar-inner">
+      <a href="index.html" class="logo"><span class="logo-dot"></span>DesignPro</a>
+      <div class="nav-links">
+        <a href="index.html">Главная</a>
+        <a href="catalog.html" class="active">Каталог услуг</a>
+        <a href="index.html#about">О компании</a>
+        <a href="index.html#portfolio">Проекты</a>
+        <a href="index.html#contact">Контакты</a>
+      </div>
+      <div class="nav-actions">
+        <button class="theme-toggle" id="themeToggle" aria-label="Переключить тему">🌙</button>
+        <a href="index.html#contact" class="btn btn-primary btn-sm nav-cta">Оставить заявку</a>
+      </div>
+      <button class="burger" id="burger" aria-label="Меню">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+</nav>
+<div class="mobile-menu" id="mobileMenu">
+  <a href="index.html">Главная</a>
+  <a href="catalog.html">Каталог услуг</a>
+  <a href="index.html#about">О компании</a>
+  <a href="index.html#portfolio">Проекты</a>
+  <a href="index.html#contact">Контакты</a>
+</div>
+
+<!-- PAGE HERO -->
+<section class="page-hero">
+  <div class="container">
+    <span class="section-tag">Каталог</span>
+    <h1 class="section-title">Каталог <em>услуг</em></h1>
+    <p class="section-subtitle">20 готовых концепций — загрузите PDF-план от застройщика и получите персональные рекомендации по стилю</p>
+  </div>
+</section>
+
+<!-- CATALOG SECTION -->
+<section class="catalog-section">
+  <div class="container">
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb" aria-label="Путь навигации">
+      <a href="index.html">Главная</a>
+      <span class="breadcrumb-sep">›</span>
+      <span class="breadcrumb-current">Каталог услуг</span>
+    </nav>
+
+    <!-- Toolbar -->
+    <div class="catalog-toolbar">
+      <div class="search-box">
+        <span class="search-box-icon">🔍</span>
+        <input type="text" id="searchInput" class="search-input" placeholder="Поиск по названию услуги...">
+      </div>
+    </div>
+
+    <!-- Plan Uploader Section -->
+    <section class="plan-uploader-section visible" id="planUploaderSection">
+      <div class="plan-uploader-box">
+        <div class="plan-uploader-inner">
+
+          <!-- Header -->
+          <div class="plan-uploader-header">
+            <div class="plan-uploader-icon-wrap">📐</div>
+            <div class="plan-uploader-header-text">
+              <span class="section-tag">Умный анализ</span>
+              <div class="plan-uploader-title">
+                Загрузите план вашей квартиры
+              </div>
+              <p class="plan-uploader-subtitle">
+                Загрузите PDF-документ с планом (например, техпаспорт БТИ). Наша система автоматически распознает площадь комнат, найдёт архитектурные особенности и предложит интерактивный редактор для уточнения размеров. В результате вы получите готовую 3D-модель вашей квартиры и персональные концепции интерьера для каждого помещения.
+              </p>
+            </div>
+          </div>
+
+          <!-- What we detect -->
+          <div class="plan-detect-chips" aria-label="Что анализируется">
+            <div class="plan-detect-chip"><span class="plan-detect-chip-dot"></span>Площадь помещений</div>
+            <div class="plan-detect-chip"><span class="plan-detect-chip-dot"></span>Высота потолков</div>
+            <div class="plan-detect-chip"><span class="plan-detect-chip-dot"></span>Кол-во комнат</div>
+            <div class="plan-detect-chip"><span class="plan-detect-chip-dot"></span>Тип дома</div>
+            <div class="plan-detect-chip"><span class="plan-detect-chip-dot"></span>Балкон / лоджия</div>
+            <div class="plan-detect-chip"><span class="plan-detect-chip-dot"></span>Номер этажа</div>
+            <div class="plan-detect-chip"><span class="plan-detect-chip-dot"></span>Открытая планировка</div>
+            <div class="plan-detect-chip"><span class="plan-detect-chip-dot"></span>Ориентация по сторонам света</div>
+            <div class="plan-detect-chip"><span class="plan-detect-chip-dot"></span>Площадь комнат</div>
+          </div>
+
+          <!-- Drop Zone -->
+          <div class="drop-zone" id="dropZone" role="button" tabindex="0"
+               aria-label="Область перетаскивания PDF-файла">
+            <input type="file" id="pdfFileInput" class="drop-zone-file-input"
+                   accept=".pdf" aria-label="Выберите PDF-файл с планом квартиры">
+            <span class="drop-zone-icon">📋</span>
+            <div class="drop-zone-title">Загрузите PDF-план квартиры от застройщика</div>
+            <p class="drop-zone-sub">Перетащите файл или нажмите кнопку — анализ начнётся автоматически</p>
+            <label for="pdfFileInput" class="drop-zone-btn" onclick="event.stopPropagation()">
+              📂 Выбрать PDF-файл
+            </label>
+            <div class="drop-zone-formats">
+              PDF с планом квартиры: поэтажный план, документация застройщика, БТИ-план
+            </div>
+            <div class="drop-zone-file-name" id="dropZoneFileName">
+              <span></span>
+              <button class="drop-zone-file-remove" id="dropZoneRemove" aria-label="Удалить файл" type="button">×</button>
+            </div>
+          </div>
+
+          <!-- PDF Preview (hidden until file loaded) -->
+          <div class="pdf-preview-wrap" id="pdfPreviewWrap" style="display:none">
+            <div class="pdf-preview-header">
+              <span>📄 Предварительный просмотр плана</span>
+              <span id="pdfPageCount" style="color:var(--teal)"></span>
+            </div>
+            <div class="pdf-preview-canvas-wrap">
+              <canvas id="pdfPreviewCanvas"></canvas>
+              <div class="pdf-preview-overlay"></div>
+            </div>
+          </div>
+
+          <!-- Missing Fields Section (shown after PDF analysis if data incomplete) -->
+          <div id="missingFieldsSection" style="display:none"></div>
+
+          <!-- Divider -->
+          <div class="plan-divider">или укажите параметры вручную</div>
+
+          <!-- Manual Toggle -->
+          <div style="text-align:center">
+            <button class="btn btn-outline" id="manualToggleBtn"
+                    style="color:rgba(255,255,255,0.7);border-color:rgba(255,255,255,0.2)">
+              ✏️ Заполнить параметры вручную
+            </button>
+            <p style="font-size:0.78rem;color:rgba(255,255,255,0.3);margin-top:8px">
+              Если у вас нет PDF от застройщика — заполните параметры самостоятельно
+            </p>
+          </div>
+
+          <!-- Manual Input Form: все параметры сразу -->
+          <div class="manual-input-form" id="manualInputForm" aria-hidden="true">
+
+            <div class="manual-form-group">
+              <label for="manualArea">Общая площадь, м²</label>
+              <input type="number" id="manualArea" class="manual-form-control"
+                     placeholder="напр. 52" min="20" max="400" step="0.5">
+            </div>
+
+            <div class="manual-form-group">
+              <label for="manualCeiling">Высота потолков, м</label>
+              <input type="number" id="manualCeiling" class="manual-form-control"
+                     placeholder="напр. 2.70" min="2.2" max="6" step="0.05">
+            </div>
+
+            <div class="manual-form-group">
+              <label for="manualRooms">Кол-во комнат</label>
+              <select id="manualRooms" class="manual-form-control">
+                <option value="1">1 комната</option>
+                <option value="2" selected>2 комнаты</option>
+                <option value="3">3 комнаты</option>
+                <option value="4">4 комнаты</option>
+              </select>
+            </div>
+
+            <div class="manual-form-group">
+              <label for="manualPlan">Планировка</label>
+              <select id="manualPlan" class="manual-form-control">
+                <option value="standard">Стандартная</option>
+                <option value="open">Открытая / студия</option>
+                <option value="long">Вытянутая</option>
+                <option value="square">Квадратная</option>
+              </select>
+            </div>
+
+            <div class="manual-form-group">
+              <label for="manualOrientation">Ориентация окон</label>
+              <select id="manualOrientation" class="manual-form-control">
+                <option value="">Не знаю</option>
+                <option value="S">☀️ Юг</option>
+                <option value="SE">🌤️ Юго-восток</option>
+                <option value="SW">🌤️ Юго-запад</option>
+                <option value="E">🌅 Восток</option>
+                <option value="W">🌆 Запад</option>
+                <option value="N">🌥️ Север</option>
+                <option value="NE">🌥️ Северо-восток</option>
+                <option value="NW">🌥️ Северо-запад</option>
+              </select>
+            </div>
+
+            <div class="manual-form-group">
+              <label for="manualWallMat">Тип дома</label>
+              <select id="manualWallMat" class="manual-form-control">
+                <option value="">Не знаю</option>
+                <option value="monolithic">🏗️ Монолит</option>
+                <option value="brick">🧱 Кирпич</option>
+                <option value="panel">📦 Панельный</option>
+                <option value="block">🪨 Блочный</option>
+                <option value="mixed">🔀 Монолит+кирпич</option>
+              </select>
+            </div>
+
+            <div class="manual-form-group">
+              <label for="manualElectric">Электрических точек (ЭЛ)</label>
+              <select id="manualElectric" class="manual-form-control">
+                <option value="0">Не знаю</option>
+                <option value="6">До 10 (минимум)</option>
+                <option value="12" selected>10–20 (стандарт)</option>
+                <option value="20">20–30 (расширенный)</option>
+                <option value="35">Более 30 (умный дом)</option>
+              </select>
+            </div>
+
+            <div class="manual-form-group">
+              <label for="manualPlumbing">Точек ВК (вода/канализация)</label>
+              <select id="manualPlumbing" class="manual-form-control">
+                <option value="0">Не знаю</option>
+                <option value="2">2–3 (1 санузел)</option>
+                <option value="5" selected>4–6 (санузел + кухня)</option>
+                <option value="8">7–10 (2 санузла)</option>
+                <option value="12">Более 10 (мастер + гостевой)</option>
+              </select>
+            </div>
+
+            <div class="manual-form-group">
+              <label for="manualComms">Точек СС (интернет, ТВ, сигнализация)</label>
+              <select id="manualComms" class="manual-form-control">
+                <option value="0">Не знаю</option>
+                <option value="2">1–3 (минимум)</option>
+                <option value="5" selected>4–6 (стандарт)</option>
+                <option value="10">7+ (полное покрытие)</option>
+              </select>
+            </div>
+
+            <!-- Toggle checkboxes -->
+            <div class="toggle-check-group">
+              <label class="toggle-check-item">
+                <input type="checkbox" id="manualWarmFloors">
+                <span class="tci-box"></span>
+                🌡️ Тёплые полы
+              </label>
+              <label class="toggle-check-item">
+                <input type="checkbox" id="manualBalcony">
+                <span class="tci-box"></span>
+                🌿 Балкон / лоджия
+              </label>
+            </div>
+
+            <button class="btn btn-primary plan-analyze-btn" id="manualAnalyzeBtn" type="button">
+              🧠 Подобрать стиль по параметрам
+            </button>
+          </div><!-- /manualInputForm -->
+
+          <!-- Analysis Progress -->
+          <div class="analysis-progress" id="analysisProgress" aria-live="polite">
+            <div class="analysis-steps" id="analysisSteps"></div>
+          </div>
+
+          <!-- Analysis Results -->
+          <div class="analysis-results" id="analysisResults" aria-live="polite">
+            <!-- Filled by JS -->
+          </div>
+
+        </div><!-- /plan-uploader-inner -->
+      </div><!-- /plan-uploader-box -->
+    </div><!-- Catalog Items (now shown as supplementary below presentation, hidden by default) -->
+    
+    <section class="section" id="catalogResultsSection" style="display:none; padding-top:0;">
+      <div class="container">
+        <h2 class="section-title" style="font-size:1.6rem;margin-bottom:30px">Готовые проекты в выбранном стиле</h2>
+        <div class="catalog-grid" id="catalogResults">
+          <!-- Generated via JS -->
+        </div>
+      </div>
+    </section>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a href="index.html" class="logo"><span class="logo-dot"></span>DesignPro</a>
+        <p>Студия премиального дизайна интерьеров. Создаем пространства, вдохновляющие на жизнь.</p>
+      </div>
+      <div class="footer-col">
+        <div class="footer-col-title">Навигация</div>
+        <ul>
+          <li><a href="index.html">Главная</a></li>
+          <li><a href="catalog.html">Каталог услуг</a></li>
+          <li><a href="index.html#about">О компании</a></li>
+          <li><a href="index.html#contact">Контакты</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <div class="footer-col-title">Стили</div>
+        <ul>
+          <li><a href="#">Минимализм</a></li>
+          <li><a href="#">Скандинавский</a></li>
+          <li><a href="#">Современный</a></li>
+          <li><a href="#">Лофт</a></li>
+          <li><a href="#">Неоклассика</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <div class="footer-col-title">Контакты</div>
+        <div class="footer-contact-item">
+          <span class="footer-contact-icon">📞</span>
+          <span class="footer-contact-text">+7 (800) 123-45-67</span>
+        </div>
+        <div class="footer-contact-item">
+          <span class="footer-contact-icon">✉️</span>
+          <span class="footer-contact-text">info@designpro.ru</span>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div class="footer-copy">© 2024 DesignPro. Все права защищены.</div>
+    </div>
+  </div>
+</footer>
+
+<!-- Floating -->
+<div class="floating-btns">
+  <a href="https://wa.me/78001234567" class="float-btn float-wa" target="_blank" aria-label="WhatsApp">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+  </a>
+  <a href="https://t.me/designpro" class="float-btn float-tg" target="_blank" aria-label="Telegram">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+  </a>
+  <button class="float-btn float-top" id="scrollTopBtn" onclick="window.scrollTo({top:0,behavior:'smooth'})" aria-label="Наверх">↑</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<!-- PDF.js for PDF parsing -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="js/main.js"></script>
+<script src="js/services-data.js"></script>
+<script src="js/catalog.js"></script>
+<script src="js/pdf-analyzer.js"></script>
+<script src="js/plan-editor.js"></script>
+<script src="js/plan-uploader.js"></script>
+</body>
+</html>

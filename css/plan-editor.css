@@ -1,0 +1,221 @@
+/* ============================================================
+   PLAN EDITOR STYLES
+   ============================================================ */
+
+/* ── Wrapper ─────────────────────────────────────────────── */
+.plan-editor-wrap {
+  background: var(--card-bg, rgba(255,255,255,0.05));
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 20px;
+  overflow: hidden;
+  margin-bottom: 28px;
+}
+
+/* ── Header ──────────────────────────────────────────────── */
+.plan-editor-header {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  background: rgba(0,212,170,0.06);
+}
+.plan-editor-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 4px;
+}
+.plan-editor-subtitle {
+  font-size: 0.85rem;
+  color: rgba(255,255,255,0.5);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Status badge */
+.plan-editor-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 100px;
+}
+.plan-editor-badge.missing {
+  background: rgba(255,107,107,0.15);
+  color: #ff6b6b;
+  border: 1px solid rgba(255,107,107,0.3);
+}
+.plan-editor-badge.ok {
+  background: rgba(0,212,170,0.15);
+  color: #00d4aa;
+  border: 1px solid rgba(0,212,170,0.3);
+}
+
+/* ── Body: split layout ──────────────────────────────────── */
+.plan-editor-body {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  min-height: 460px;
+}
+@media (max-width: 900px) {
+  .plan-editor-body { grid-template-columns: 1fr; }
+}
+
+/* ── Left: canvas area ───────────────────────────────────── */
+.plan-editor-left {
+  padding: 20px;
+  border-right: 1px solid rgba(255,255,255,0.07);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.plan-editor-canvas-wrap {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(0,0,0,0.3);
+  flex: 1;
+  min-height: 260px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.plan-editor-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  border-radius: 12px;
+}
+.plan-editor-no-canvas {
+  color: rgba(255,255,255,0.3);
+  font-size: 1rem;
+  padding: 40px;
+}
+
+/* ── SVG overlay markers ─────────────────────────────────── */
+@keyframes planPulse {
+  0%, 100% { opacity: 1;   transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(1.2); }
+}
+.plan-editor-pulse {
+  animation: planPulse 1.4s ease-in-out infinite;
+  transform-origin: center;
+}
+
+/* ── Legend ──────────────────────────────────────────────── */
+.plan-editor-legend {
+  display: flex;
+  gap: 16px;
+  font-size: 0.78rem;
+  color: rgba(255,255,255,0.45);
+}
+.leg-item { display: flex; align-items: center; gap: 6px; }
+.leg-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  display: inline-block; flex-shrink: 0;
+}
+.leg-dot.blink { animation: planPulse 1.4s ease-in-out infinite; }
+
+/* ── Right: dimension table ──────────────────────────────── */
+.plan-editor-right {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow-y: auto;
+  max-height: 560px;
+}
+
+.plan-editor-section-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(255,255,255,0.35);
+  margin-bottom: 8px;
+}
+
+.plan-editor-dims {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+/* ── Dimension row ───────────────────────────────────────── */
+.dim-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  font-size: 0.83rem;
+  transition: background 0.2s;
+}
+.dim-row:hover { background: rgba(255,255,255,0.04); }
+.dim-row.dim-found    { border-left: 2px solid rgba(0,212,170,0.4); }
+.dim-row.dim-missing  { border-left: 2px solid rgba(255,200,0,0.3); }
+.dim-row.dim-required { border-left: 2px solid rgba(255,107,107,0.5); }
+
+.dim-icon  { font-size: 0.95rem; width: 20px; flex-shrink: 0; }
+.dim-label { flex: 1; color: rgba(255,255,255,0.75); }
+.dim-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+.dim-value {
+  color: #00d4aa;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.dim-input {
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 6px;
+  color: #fff;
+  padding: 4px 8px;
+  font-size: 0.83rem;
+  width: 80px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.dim-input:focus {
+  border-color: rgba(0,212,170,0.6);
+  background: rgba(0,212,170,0.06);
+}
+.dim-input::placeholder { color: rgba(255,255,255,0.25); }
+
+/* ── Status badges ───────────────────────────────────────── */
+.dim-status {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 100px;
+  white-space: nowrap;
+}
+.dim-status.found    { color: rgba(0,212,170,0.7); }
+.dim-status.missing  { color: rgba(255,200,0,0.8); }
+.dim-status.required { color: rgba(255,107,107,0.9); }
+
+/* ── Confirm button ──────────────────────────────────────── */
+.plan-editor-confirm-btn {
+  margin-top: 18px;
+  width: 100%;
+  padding: 13px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #00d4aa, #00a8cc);
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.02em;
+  transition: opacity 0.2s, transform 0.15s;
+}
+.plan-editor-confirm-btn:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+.plan-editor-confirm-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

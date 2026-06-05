@@ -1,0 +1,8 @@
+[build]
+  publish = "." # Директория с публичными файлами (корневая)
+  # command = "npm run build" # Раскомментируйте, если добавите сборку (например, React/Vue)
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
