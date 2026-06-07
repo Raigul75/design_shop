@@ -45,6 +45,14 @@ const PlanGraphicsEditor = (() => {
       _roomsData[roomId].label = label;
     }
     
+    // Update indicator
+    const indicator = document.getElementById('graphicEditorActiveRoomIndicator');
+    if (indicator) {
+       indicator.style.display = 'block';
+       indicator.innerHTML = `<span style="display:inline-block; width:12px; height:12px; border-radius:50%; background-color:${color}; margin-right:8px; vertical-align:middle;"></span><span style="vertical-align:middle;">Выбрано: ${label}</span>`;
+       indicator.style.borderColor = color;
+    }
+    
     redraw();
   }
 
@@ -90,6 +98,25 @@ const PlanGraphicsEditor = (() => {
     _svg.addEventListener('mousemove', onMouseMove);
     _svg.addEventListener('mouseup', onMouseUp);
     _svg.addEventListener('contextmenu', onContextMenu);
+    
+    // Active Room Indicator
+    const indicator = document.createElement('div');
+    indicator.id = 'graphicEditorActiveRoomIndicator';
+    indicator.style.position = 'absolute';
+    indicator.style.top = '10px';
+    indicator.style.left = '10px';
+    indicator.style.padding = '8px 16px';
+    indicator.style.background = 'rgba(0,0,0,0.8)';
+    indicator.style.border = '1px solid rgba(255,255,255,0.2)';
+    indicator.style.borderRadius = '8px';
+    indicator.style.color = '#fff';
+    indicator.style.fontFamily = 'sans-serif';
+    indicator.style.fontWeight = 'bold';
+    indicator.style.zIndex = '10';
+    indicator.style.display = 'none';
+    indicator.style.pointerEvents = 'none';
+    indicator.style.boxShadow = '0 4px 12px rgba(0,0,0,0.5)';
+    _container.appendChild(indicator);
     
     // Note: Removed the large visual "Undo" button because it blocked the view.
     // Undo is now purely right-click.
@@ -327,6 +354,10 @@ const PlanGraphicsEditor = (() => {
       _roomsData[roomId].label = newLabel;
       if (roomId === _activeRoomId) {
         _activeLabel = newLabel;
+        const indicator = document.getElementById('graphicEditorActiveRoomIndicator');
+        if (indicator) {
+           indicator.innerHTML = `<span style="display:inline-block; width:12px; height:12px; border-radius:50%; background-color:${_activeColor}; margin-right:8px; vertical-align:middle;"></span><span style="vertical-align:middle;">Выбрано: ${newLabel}</span>`;
+        }
       }
       redraw();
     }

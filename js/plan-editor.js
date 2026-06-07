@@ -81,7 +81,8 @@ const PlanEditor = (() => {
       kitchen: '🍳', bathroom: '🚿', loggia:  '🌿', balcony: '🌿', other: '📐',
     };
     const colors = [
-      '#e74c3c', '#2ecc71', '#3498db', '#9b59b6', '#f1c40f', '#e67e22', '#1abc9c', '#34495e'
+      '#e74c3c', '#2ecc71', '#3498db', '#9b59b6', '#f1c40f', '#e67e22', '#1abc9c', '#34495e',
+      '#e84393', '#00cec9', '#fdcb6e', '#d63031', '#6c5ce7', '#ffeaa7', '#00b894', '#0984e3'
     ];
     let colorIndex = 0;
 
@@ -442,10 +443,24 @@ const PlanEditor = (() => {
 
   /* ── Add Manual Room ──────────── */
   function addManualRoom() {
+    // 1. Save currently entered data before re-rendering
+    _dimensions.forEach(d => {
+       const valEl = document.getElementById(`dim_${d.id}`);
+       if (valEl) d.value = valEl.value;
+       
+       if (d.id.startsWith('room_')) {
+          const nameEl = document.getElementById(`dim_name_${d.id}`);
+          if (nameEl) d.label = nameEl.value;
+       }
+    });
+
     const rooms = _dimensions.filter(d => d.id.startsWith('room_'));
     const newId = rooms.length > 0 ? Math.max(...rooms.map(r => parseInt(r.roomId) || 0)) + 1 : 1;
     
-    const colors = ['#e74c3c', '#2ecc71', '#3498db', '#9b59b6', '#f1c40f', '#e67e22', '#1abc9c', '#34495e'];
+    const colors = [
+      '#e74c3c', '#2ecc71', '#3498db', '#9b59b6', '#f1c40f', '#e67e22', '#1abc9c', '#34495e',
+      '#e84393', '#00cec9', '#fdcb6e', '#d63031', '#6c5ce7', '#ffeaa7', '#00b894', '#0984e3'
+    ];
     const newColor = colors[(newId - 1) % colors.length];
 
     const newDim = {
