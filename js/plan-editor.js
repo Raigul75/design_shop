@@ -170,51 +170,7 @@ const PlanEditor = (() => {
     return null;
   }
 
-  /* ── Build SVG overlay ───────────────────────────────────── */
-  function buildSVGOverlay(canvas) {
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.style.cssText = `
-      position:absolute; top:0; left:0;
-      width:100%; height:100%;
-      pointer-events:none;
-      z-index:10;
-    `;
-    svg.setAttribute('viewBox', `0 0 ${canvas.width} ${canvas.height}`);
-
-    // Room markers
-    const sorted = [..._roomDetails].sort((a, b) => a.id - b.id);
-    sorted.forEach(room => {
-      const pos = findRoomPosition(room.id, canvas.width, canvas.height);
-      if (!pos) return;
-
-      const hasArea = room.area > 0;
-      const color   = hasArea ? '#00d4aa' : '#ff6b6b';
-      const pulse   = hasArea ? '' : 'plan-editor-pulse';
-
-      // Circle marker
-      const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-      circle.setAttribute('cx', pos.x);
-      circle.setAttribute('cy', pos.y - 10);
-      circle.setAttribute('r',  '12');
-      circle.setAttribute('fill', color);
-      circle.setAttribute('fill-opacity', '0.85');
-      circle.setAttribute('class', pulse);
-      svg.appendChild(circle);
-
-      // Room number text
-      const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      text.setAttribute('x', pos.x);
-      text.setAttribute('y', pos.y - 6);
-      text.setAttribute('text-anchor', 'middle');
-      text.setAttribute('font-size', '10');
-      text.setAttribute('font-weight', 'bold');
-      text.setAttribute('fill', '#fff');
-      text.textContent = hasArea ? `${room.area.toFixed(1)}` : '?';
-      svg.appendChild(text);
-    });
-
-    return svg;
-  }
+  // Removed buildSVGOverlay since we use PlanGraphicsEditor
 
   /* ── Render full editor UI ───────────────────────────────── */
   function renderEditorUI(container) {
@@ -271,15 +227,56 @@ const PlanEditor = (() => {
         </div>
       </div>`;
 
-    // Inject SVG overlay on canvas
+    // Inject Graphic Editor into left panel
     if (_canvas) {
       setTimeout(() => {
+        // Collect initial positions
+        const positions = {};
+        _roomDetails.forEach(room => {
+          const pos = findRoomPosition(room.id, _canvas.width, _canvas.height);
+          if (pos) positions[room.id] = pos;
+        });
+
         const wrap = document.getElementById('planEditorCanvasWrap');
-        if (!wrap) return;
-        wrap.style.position = 'relative';
-        const svg = buildSVGOverlay(_canvas);
-        _svgOverlay = svg;
-        wrap.appendChild(svg);
+        if (wrap) {
+           wrap.innerHTML = '<div id="graphicEditorContainer"></div>';
+           PlanGraphicsEditor.init({
+              containerId: 'graphicEditorContainer',
+              canvas: _canvas,
+              roomDetails: _roomDetails,
+              positions: positions,
+              onChange: (roomId, newArea) => {
+                 const input = document.getElementById(`dim_room_${roomId}`);
+                 if (input) {
+                    input.value = newArea.toFixed(1);
+                    // update UI state
+                    const row = input.closest('.dim-row');
+                    if (row) {
+                      row.classList.remove('dim-missing');
+                      row.classList.add('dim-found');
+                      const status = row.querySelector('.dim-status');
+                      if (status) {
+                        status.className = 'dim-status found';
+                        status.innerHTML = '✅ из чертежа';
+                      }
+                    }
+                 }
+              }
+           });
+        }
+        
+        // Setup 2-way binding from inputs to graphics editor
+        _dimensions.filter(d => d.id.startsWith('room_')).forEach(d => {
+           const input = document.getElementById(`dim_${d.id}`);
+           if (input) {
+             input.addEventListener('input', (e) => {
+               const newArea = parseFloat(e.target.value);
+               if (!isNaN(newArea) && newArea > 0) {
+                 PlanGraphicsEditor.updateRoomArea(d.roomId, newArea);
+               }
+             });
+           }
+        });
       }, 100);
     }
   }

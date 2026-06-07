@@ -973,22 +973,26 @@
         try {
           const dataUrl = 'img/3d_floorplan_render.png';
           planSlot = `
-            <div class="room-section plan-section">
-              <div class="room-section-header">
+            <div class="room-section room-locked" style="opacity: 0.9;">
+              <div class="room-section-header" style="opacity: 0.6;">
                 <div class="room-section-icon">📐</div>
                 <div>
-                  <div class="room-section-title">3D-Модель вашей квартиры</div>
-                  <div class="room-section-sub">
-                    Сгенерированная 3D-визуализация на основе распознанного плана: ${roomCount}-комнатная,
-                    ${metrics.totalArea ? metrics.totalArea.toFixed(0) + ' м²' : ''}
-                    ${buildArchNotes(metrics)}
-                  </div>
+                  <div class="room-section-title">3D-Модель вашей квартиры <span style="font-size: 0.8rem; background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px; margin-left: 8px;">🔒 Премиум</span></div>
+                  <div class="room-section-sub">Полный 3D-план предоставляется в рамках комплексного проекта</div>
                 </div>
               </div>
-              <div class="plan-canvas-display" style="border:none;background:transparent;padding:0;">
-                <img src="${dataUrl}" alt="Ваш 3D план квартиры" class="plan-canvas-img" style="border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,0.4);max-height:450px;object-fit:cover;">
-                <div class="plan-style-overlay" style="bottom:20px;right:20px;font-size:1.1rem;background:var(--teal);color:#000;box-shadow:0 4px 15px rgba(22,255,224,0.3)">
-                  ✨ Готовая модель
+              <div style="margin-top: 15px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 30px; text-align: center; position: relative; overflow: hidden;">
+                <div style="position: absolute; top: -10px; left: -10px; right: -10px; bottom: -10px; background-image: url('${dataUrl}'); background-size: cover; background-position: center; filter: blur(15px) brightness(0.4); z-index: 0;"></div>
+                <div style="position: relative; z-index: 1;">
+                  <div style="font-size: 32px; margin-bottom: 10px;">🗺️</div>
+                  <h4 style="margin: 0 0 10px; color: #fff;">Общий 3D-план квартиры</h4>
+                  <p style="color: rgba(255,255,255,0.7); font-size: 0.95rem; margin: 0 0 20px; max-width: 450px; display: inline-block;">
+                    Получите детальную расстановку мебели и планировку всей квартиры в 3D.
+                  </p>
+                  <br>
+                  <button class="btn btn-primary" onclick="alert('Переход к заказу проекта (от 14 990 ₸)')" style="background: var(--teal); color: #000; font-weight: 600; border: none; padding: 12px 28px; border-radius: 8px; cursor: pointer; transition: 0.2s;">
+                    Заказать 3D-план от 14 990 ₸
+                  </button>
                 </div>
               </div>
             </div>`;
