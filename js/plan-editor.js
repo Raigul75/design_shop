@@ -80,6 +80,11 @@ const PlanEditor = (() => {
       hallway: '🚪', wardrobe: '👔', living: '🛏️',
       kitchen: '🍳', bathroom: '🚿', loggia:  '🌿', balcony: '🌿', other: '📐',
     };
+    const colors = [
+      '#e74c3c', '#2ecc71', '#3498db', '#9b59b6', '#f1c40f', '#e67e22', '#1abc9c', '#34495e'
+    ];
+    let colorIndex = 0;
+
     const sorted = [...(roomDetails || [])].sort((a, b) => a.id - b.id);
     sorted.forEach(r => {
       dims.push({
@@ -92,7 +97,9 @@ const PlanEditor = (() => {
         icon:     typeIconMap[r.type] || '📐',
         roomId:   r.id,
         type:     r.type,
+        color:    colors[colorIndex % colors.length]
       });
+      colorIndex++;
     });
 
     // ── Architectural elements ───────────────────────────────
@@ -322,16 +329,33 @@ const PlanEditor = (() => {
       inputHtml = `<span class="dim-value">${d.value} ${d.unit}</span>`;
     }
 
+    const colorStyle = isRoom && d.color ? `border-left: 4px solid ${d.color}; padding-left: 10px; cursor: pointer;` : '';
+    const clickAttr = isRoom && d.color ? `onclick="window.setActiveRoomFromTable('${d.roomId}', '${d.color}', '${d.label}')"` : '';
+
     return `
-      <div class="dim-row ${statusCls}">
+      <div class="dim-row ${statusCls}" style="${colorStyle}" ${clickAttr} id="row_${d.id}">
         <span class="dim-icon">${d.icon}</span>
-        <span class="dim-label">${d.label}</span>
+        <span class="dim-label" style="flex:1;">${d.label}</span>
         <div class="dim-right">
           ${inputHtml}
           ${statusTxt}
         </div>
       </div>`;
   }
+  
+  // Global handler for clicking on table row
+  window.setActiveRoomFromTable = function(roomId, color, label) {
+    document.querySelectorAll('.dim-row').forEach(row => {
+      row.style.backgroundColor = 'transparent';
+    });
+    const row = document.getElementById(`row_room_${roomId}`);
+    if (row) {
+      row.style.backgroundColor = 'rgba(255,255,255,0.05)';
+    }
+    if (typeof PlanGraphicsEditor !== 'undefined') {
+       PlanGraphicsEditor.setActiveRoom(roomId, color, label);
+    }
+  };
 
   /* ── Safe toDataURL (handles SecurityError) ──────────────── */
   function safeDataUrl(canvas) {

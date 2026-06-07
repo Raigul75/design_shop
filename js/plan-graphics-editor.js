@@ -1,178 +1,94 @@
 /* ============================================================
-   PLAN GRAPHICS EDITOR
+   PLAN GRAPHICS EDITOR (Polygon Mode)
    Interactive 2D vector editor overlay on PDF canvas.
-   Allows moving and resizing room blocks.
+   Allows point-by-point drawing of room polygons.
    ============================================================ */
 
 const PlanGraphicsEditor = (() => {
   'use strict';
 
-  let _container, _canvas, _roomDetails, _positions, _onChange;
-  let _svg, _dragItem = null, _resizeItem = null;
-  let _offsetX = 0, _offsetY = 0;
+  let _container, _canvas, _onChange;
+  let _svg, _img;
   
-  // Base scale: 1 meter = 40 pixels
-  const PPM = 40;
+  // State
+  let _activeRoomId = null;
+  let _activeColor = '#ffffff';
+  let _activeLabel = '';
+  
+  // Data structure for polygons: roomId -> { color, label, points: [{x,y}], isClosed: boolean }
+  let _roomsData = {};
+  
+  // Interaction state
+  let _draggedPoint = null; // { roomId, pointIndex }
+  let _hoveredPoint = null;
+  
+  const CLOSE_DISTANCE = 15; // pixels distance to snap and close polygon
 
-  function init({ containerId, canvas, roomDetails, positions, onChange }) {
+  function init({ containerId, canvas, onChange }) {
     _container = document.getElementById(containerId);
     _canvas = canvas;
-    _roomDetails = roomDetails || [];
-    _positions = positions || {}; // map of roomId -> {x,y}
     _onChange = onChange || (() => {});
 
-    render();
+    renderCanvas();
   }
 
-  function getRoomColor(type) {
-    const colors = {
-      living: 'rgba(52, 152, 219, 0.4)',
-      bedroom: 'rgba(155, 89, 182, 0.4)',
-      kitchen: 'rgba(230, 126, 34, 0.4)',
-      bathroom: 'rgba(26, 188, 156, 0.4)',
-      hallway: 'rgba(149, 165, 166, 0.4)',
-      wardrobe: 'rgba(241, 196, 15, 0.4)',
-      loggia: 'rgba(46, 204, 113, 0.4)',
-      balcony: 'rgba(46, 204, 113, 0.4)'
-    };
-    return colors[type] || 'rgba(189, 195, 199, 0.4)';
+  function setActiveRoom(roomId, color, label) {
+    _activeRoomId = roomId;
+    _activeColor = color;
+    _activeLabel = label;
+    
+    if (!_roomsData[roomId]) {
+      _roomsData[roomId] = { color, label, points: [], isClosed: false };
+    } else {
+      // Update color/label if it changed
+      _roomsData[roomId].color = color;
+      _roomsData[roomId].label = label;
+    }
+    
+    redraw();
   }
 
-  function render() {
+  function renderCanvas() {
     if (!_container || !_canvas) return;
 
     _container.innerHTML = '';
     _container.style.position = 'relative';
     _container.style.width = '100%';
-    // Set a fixed height or max-height with scroll
     _container.style.height = '600px';
     _container.style.overflow = 'auto';
     _container.style.background = '#1a1a1a';
     _container.style.border = '1px solid rgba(255,255,255,0.1)';
     _container.style.borderRadius = '8px';
+    // Use crosshair when drawing
+    _container.style.cursor = 'crosshair';
 
     // Background layer (PDF)
-    const img = document.createElement('img');
+    _img = document.createElement('img');
     try {
-      img.src = _canvas.toDataURL('image/png');
+      _img.src = _canvas.toDataURL('image/png');
     } catch(e) {}
-    img.style.position = 'absolute';
-    img.style.top = '0';
-    img.style.left = '0';
-    img.style.pointerEvents = 'none';
-    img.style.filter = 'grayscale(100%) contrast(1.2) opacity(0.5)';
-    _container.appendChild(img);
+    _img.style.position = 'absolute';
+    _img.style.top = '0';
+    _img.style.left = '0';
+    _img.style.pointerEvents = 'none';
+    _img.style.filter = 'grayscale(100%) contrast(1.2) opacity(0.8)';
+    _container.appendChild(_img);
 
     // SVG Layer
     _svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     _svg.style.position = 'absolute';
     _svg.style.top = '0';
     _svg.style.left = '0';
-    _svg.style.width = Math.max(_canvas.width, 800) + 'px';
-    _svg.style.height = Math.max(_canvas.height, 600) + 'px';
+    // Ensure SVG is exactly same size as canvas
+    _svg.style.width = _canvas.width + 'px';
+    _svg.style.height = _canvas.height + 'px';
     
-    // Create defs for grid (optional, but looks nice)
-    _svg.innerHTML = `
-      <defs>
-        <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
-          <path d="M 20 0 L 0 0 0 20" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
-        </pattern>
-      </defs>
-      <rect width="100%" height="100%" fill="url(#grid)" pointer-events="none" />
-    `;
-
-    _roomDetails.forEach(room => {
-      createRoomBlock(room);
-    });
-
     _container.appendChild(_svg);
 
     // Mouse events
     _svg.addEventListener('mousedown', onMouseDown);
     _svg.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp); // window to catch drops outside
-  }
-
-  function createRoomBlock(room) {
-    const area = room.area || 10;
-    // Assuming a square room to get initial width/height in meters
-    const sideMeters = Math.sqrt(area);
-    const w = sideMeters * PPM;
-    const h = sideMeters * PPM;
-
-    // Position
-    let cx = _canvas.width / 2;
-    let cy = _canvas.height / 2;
-    
-    if (_positions[room.id]) {
-      cx = _positions[room.id].x;
-      cy = _positions[room.id].y;
-    } else {
-      // Offset randomly if no position found
-      cx += (Math.random() - 0.5) * 200;
-      cy += (Math.random() - 0.5) * 200;
-    }
-
-    const x = cx - w/2;
-    const y = cy - h/2;
-
-    const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    group.setAttribute('transform', `translate(${x}, ${y})`);
-    group.setAttribute('class', 'room-block');
-    group.setAttribute('data-id', room.id);
-    group.setAttribute('data-w', w);
-    group.setAttribute('data-h', h);
-
-    // Rect
-    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    rect.setAttribute('width', w);
-    rect.setAttribute('height', h);
-    rect.setAttribute('fill', getRoomColor(room.type));
-    rect.setAttribute('stroke', '#fff');
-    rect.setAttribute('stroke-width', '2');
-    rect.setAttribute('rx', '4');
-    rect.style.cursor = 'move';
-    rect.classList.add('room-rect');
-
-    // Label
-    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    text.setAttribute('x', w/2);
-    text.setAttribute('y', h/2);
-    text.setAttribute('text-anchor', 'middle');
-    text.setAttribute('alignment-baseline', 'middle');
-    text.setAttribute('fill', '#fff');
-    text.setAttribute('font-size', '14');
-    text.setAttribute('font-weight', 'bold');
-    text.setAttribute('pointer-events', 'none');
-    text.textContent = `${room.id}) ${room.nameRu || room.name}`;
-    
-    // Area Label
-    const areaText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    areaText.setAttribute('x', w/2);
-    areaText.setAttribute('y', h/2 + 18);
-    areaText.setAttribute('text-anchor', 'middle');
-    areaText.setAttribute('fill', 'rgba(255,255,255,0.8)');
-    areaText.setAttribute('font-size', '12');
-    areaText.setAttribute('pointer-events', 'none');
-    areaText.classList.add('room-area-label');
-    areaText.textContent = `${area.toFixed(1)} м²`;
-
-    // Resize handle
-    const handle = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    handle.setAttribute('x', w - 10);
-    handle.setAttribute('y', h - 10);
-    handle.setAttribute('width', '10');
-    handle.setAttribute('height', '10');
-    handle.setAttribute('fill', '#fff');
-    handle.setAttribute('cursor', 'nwse-resize');
-    handle.classList.add('resize-handle');
-
-    group.appendChild(rect);
-    group.appendChild(text);
-    group.appendChild(areaText);
-    group.appendChild(handle);
-
-    _svg.appendChild(group);
+    _svg.addEventListener('mouseup', onMouseUp);
   }
 
   function getMouseCoords(e) {
@@ -181,115 +97,197 @@ const PlanGraphicsEditor = (() => {
     pt.y = e.clientY;
     return pt.matrixTransform(_svg.getScreenCTM().inverse());
   }
+  
+  function distance(p1, p2) {
+    return Math.sqrt((p1.x - p2.x)**2 + (p1.y - p2.y)**2);
+  }
 
   function onMouseDown(e) {
-    if (e.target.classList.contains('resize-handle')) {
-      _resizeItem = e.target.parentNode;
-      const pt = getMouseCoords(e);
-      _offsetX = pt.x;
-      _offsetY = pt.y;
-      e.preventDefault();
-    } else if (e.target.classList.contains('room-rect')) {
-      _dragItem = e.target.parentNode;
-      const pt = getMouseCoords(e);
+    if (!_activeRoomId) {
+       alert("Пожалуйста, выберите комнату в таблице справа для отрисовки.");
+       return;
+    }
+
+    const pt = getMouseCoords(e);
+    const room = _roomsData[_activeRoomId];
+
+    // Check if clicking on an existing point to drag
+    let clickedPoint = null;
+    for (const [rId, rData] of Object.entries(_roomsData)) {
+      for (let i = 0; i < rData.points.length; i++) {
+        const p = rData.points[i];
+        if (distance(pt, p) <= CLOSE_DISTANCE) {
+          clickedPoint = { roomId: rId, pointIndex: i };
+          break;
+        }
+      }
+      if (clickedPoint) break;
+    }
+
+    if (clickedPoint) {
+      // Start dragging a point
+      _draggedPoint = clickedPoint;
       
-      const transform = _dragItem.getAttribute('transform');
-      const match = /translate\(([^,]+),\s*([^)]+)\)/.exec(transform);
-      const startX = match ? parseFloat(match[1]) : 0;
-      const startY = match ? parseFloat(match[2]) : 0;
-      
-      _offsetX = pt.x - startX;
-      _offsetY = pt.y - startY;
-      
-      // Bring to front
-      _svg.appendChild(_dragItem);
-      e.preventDefault();
+      // If we clicked the FIRST point of the ACTIVE room, and it's NOT closed, we close it
+      if (clickedPoint.roomId === _activeRoomId && clickedPoint.pointIndex === 0 && !room.isClosed && room.points.length > 2) {
+         room.isClosed = true;
+         _draggedPoint = null; // Don't drag on close click
+         redraw();
+      }
+      return;
+    }
+
+    // If active room polygon is not closed, add a point
+    if (!room.isClosed) {
+      room.points.push({ x: pt.x, y: pt.y });
+      redraw();
     }
   }
 
   function onMouseMove(e) {
-    if (_dragItem) {
-      const pt = getMouseCoords(e);
-      _dragItem.setAttribute('transform', `translate(${pt.x - _offsetX}, ${pt.y - _offsetY})`);
-    } else if (_resizeItem) {
-      const pt = getMouseCoords(e);
-      const dx = pt.x - _offsetX;
-      const dy = pt.y - _offsetY;
-      
-      const w = Math.max(20, parseFloat(_resizeItem.getAttribute('data-w')) + dx);
-      const h = Math.max(20, parseFloat(_resizeItem.getAttribute('data-h')) + dy);
-      
-      updateRoomBlockSize(_resizeItem, w, h);
-      
-      _offsetX = pt.x;
-      _offsetY = pt.y;
+    const pt = getMouseCoords(e);
+
+    // Dragging logic
+    if (_draggedPoint) {
+      const { roomId, pointIndex } = _draggedPoint;
+      _roomsData[roomId].points[pointIndex] = { x: pt.x, y: pt.y };
+      redraw();
+      return;
+    }
+
+    // Hover logic (cursor change)
+    let hovered = false;
+    for (const [rId, rData] of Object.entries(_roomsData)) {
+      for (let i = 0; i < rData.points.length; i++) {
+        const p = rData.points[i];
+        if (distance(pt, p) <= CLOSE_DISTANCE) {
+          hovered = true;
+          break;
+        }
+      }
+      if (hovered) break;
+    }
+    
+    if (hovered) {
+      _svg.style.cursor = 'grab';
+    } else {
+      _svg.style.cursor = _activeRoomId && !_roomsData[_activeRoomId]?.isClosed ? 'crosshair' : 'default';
+    }
+
+    // Draw dynamic line from last point to mouse cursor if not closed
+    if (_activeRoomId && _roomsData[_activeRoomId] && !_roomsData[_activeRoomId].isClosed && _roomsData[_activeRoomId].points.length > 0) {
+       redraw(pt); // pass current mouse pos to draw temporary line
     }
   }
 
   function onMouseUp(e) {
-    if (_resizeItem) {
-      const w = parseFloat(_resizeItem.getAttribute('data-w'));
-      const h = parseFloat(_resizeItem.getAttribute('data-h'));
-      const newArea = (w / PPM) * (h / PPM);
+    _draggedPoint = null;
+  }
+
+  function redraw(mousePt = null) {
+    _svg.innerHTML = '';
+
+    // Draw all rooms
+    for (const [roomId, room] of Object.entries(_roomsData)) {
+      if (room.points.length === 0) continue;
+
+      const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
       
-      const roomId = parseInt(_resizeItem.getAttribute('data-id'));
+      // Points string
+      const pointsStr = room.points.map(p => `${p.x},${p.y}`).join(' ');
+
+      // Polygon or Polyline
+      const shape = document.createElementNS('http://www.w3.org/2000/svg', room.isClosed ? 'polygon' : 'polyline');
+      shape.setAttribute('points', pointsStr);
+      shape.setAttribute('fill', room.isClosed ? room.color : 'none');
+      shape.setAttribute('stroke', room.color);
+      shape.setAttribute('stroke-width', '3');
+      shape.setAttribute('stroke-linejoin', 'round');
       
-      // Update room area label
-      const areaLabel = _resizeItem.querySelector('.room-area-label');
-      if (areaLabel) areaLabel.textContent = `${newArea.toFixed(1)} м²`;
+      // Semi-transparent fill
+      if (room.isClosed) {
+         shape.setAttribute('fill-opacity', '0.4');
+      }
 
-      // Notify external
-      _onChange(roomId, newArea);
+      group.appendChild(shape);
+
+      // Temporary line to mouse cursor
+      if (mousePt && !room.isClosed && roomId === _activeRoomId) {
+         const lastPt = room.points[room.points.length - 1];
+         const tempLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+         tempLine.setAttribute('x1', lastPt.x);
+         tempLine.setAttribute('y1', lastPt.y);
+         tempLine.setAttribute('x2', mousePt.x);
+         tempLine.setAttribute('y2', mousePt.y);
+         tempLine.setAttribute('stroke', room.color);
+         tempLine.setAttribute('stroke-width', '2');
+         tempLine.setAttribute('stroke-dasharray', '5,5');
+         group.appendChild(tempLine);
+         
+         // Highlight first point if close enough to close polygon
+         if (room.points.length > 2 && distance(mousePt, room.points[0]) <= CLOSE_DISTANCE) {
+            const snapCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            snapCircle.setAttribute('cx', room.points[0].x);
+            snapCircle.setAttribute('cy', room.points[0].y);
+            snapCircle.setAttribute('r', '8');
+            snapCircle.setAttribute('fill', 'none');
+            snapCircle.setAttribute('stroke', '#fff');
+            snapCircle.setAttribute('stroke-width', '2');
+            group.appendChild(snapCircle);
+         }
+      }
+
+      // Draw nodes (points)
+      room.points.forEach((p, idx) => {
+         const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+         circle.setAttribute('cx', p.x);
+         circle.setAttribute('cy', p.y);
+         circle.setAttribute('r', '5');
+         circle.setAttribute('fill', '#fff');
+         circle.setAttribute('stroke', room.color);
+         circle.setAttribute('stroke-width', '2');
+         circle.style.cursor = 'grab';
+         group.appendChild(circle);
+         
+         // Draw label at the center of polygon (approximated by average of points)
+         if (room.isClosed && idx === room.points.length - 1) {
+            let cx = 0, cy = 0;
+            room.points.forEach(pt => { cx += pt.x; cy += pt.y; });
+            cx /= room.points.length;
+            cy /= room.points.length;
+            
+            const textBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            text.setAttribute('x', cx);
+            text.setAttribute('y', cy);
+            text.setAttribute('text-anchor', 'middle');
+            text.setAttribute('alignment-baseline', 'middle');
+            text.setAttribute('fill', '#fff');
+            text.setAttribute('font-size', '14');
+            text.setAttribute('font-weight', 'bold');
+            text.setAttribute('pointer-events', 'none');
+            text.textContent = room.label;
+            
+            // Background pill for text
+            textBg.setAttribute('fill', '#000');
+            textBg.setAttribute('fill-opacity', '0.6');
+            textBg.setAttribute('rx', '4');
+            // Estimate width
+            const tw = room.label.length * 8 + 10;
+            textBg.setAttribute('x', cx - tw/2);
+            textBg.setAttribute('y', cy - 12);
+            textBg.setAttribute('width', tw);
+            textBg.setAttribute('height', '24');
+            textBg.setAttribute('pointer-events', 'none');
+            
+            group.appendChild(textBg);
+            group.appendChild(text);
+         }
+      });
+
+      _svg.appendChild(group);
     }
-    
-    _dragItem = null;
-    _resizeItem = null;
   }
 
-  function updateRoomBlockSize(group, w, h) {
-    group.setAttribute('data-w', w);
-    group.setAttribute('data-h', h);
-    
-    const rect = group.querySelector('.room-rect');
-    rect.setAttribute('width', w);
-    rect.setAttribute('height', h);
-    
-    const text = group.querySelector('text');
-    text.setAttribute('x', w/2);
-    text.setAttribute('y', h/2);
-    
-    const areaText = group.querySelector('.room-area-label');
-    if (areaText) {
-      areaText.setAttribute('x', w/2);
-      areaText.setAttribute('y', h/2 + 18);
-      // update text is done in mouseup to avoid too many callbacks, but visually we can update it
-      const newArea = (w / PPM) * (h / PPM);
-      areaText.textContent = `${newArea.toFixed(1)} м²`;
-    }
-    
-    const handle = group.querySelector('.resize-handle');
-    handle.setAttribute('x', w - 10);
-    handle.setAttribute('y', h - 10);
-  }
-
-  // API to update from external input (explication table)
-  function updateRoomArea(roomId, newArea) {
-    const group = _svg.querySelector(`.room-block[data-id="${roomId}"]`);
-    if (!group) return;
-
-    // keep ratio, scale both w and h
-    const oldW = parseFloat(group.getAttribute('data-w'));
-    const oldH = parseFloat(group.getAttribute('data-h'));
-    const oldArea = (oldW / PPM) * (oldH / PPM);
-    
-    if (oldArea === 0) return;
-    
-    const scale = Math.sqrt(newArea / oldArea);
-    const newW = oldW * scale;
-    const newH = oldH * scale;
-    
-    updateRoomBlockSize(group, newW, newH);
-  }
-
-  return { init, updateRoomArea };
+  return { init, setActiveRoom };
 })();
