@@ -7,7 +7,7 @@
 const PlanGraphicsEditor = (() => {
   'use strict';
 
-  let _container, _canvas, _onChange;
+  let _container, _canvas, _onChange, _onRoomClosed;
   let _svg, _img;
   
   // State
@@ -24,10 +24,11 @@ const PlanGraphicsEditor = (() => {
   
   const CLOSE_DISTANCE = 8; // Reduced snap distance for precision
 
-  function init({ containerId, canvas, onChange }) {
+  function init({ containerId, canvas, onChange, onRoomClosed }) {
     _container = document.getElementById(containerId);
     _canvas = canvas;
     _onChange = onChange || (() => {});
+    _onRoomClosed = onRoomClosed || (() => {});
 
     renderCanvas();
   }
@@ -182,6 +183,11 @@ const PlanGraphicsEditor = (() => {
          room.isClosed = true;
          _draggedPoint = null; // Don't drag on close click
          redraw();
+         
+         // Trigger callback to auto-advance
+         if (_onRoomClosed && _activeRoomId) {
+            _onRoomClosed(_activeRoomId);
+         }
       } else {
          // Start dragging a point
          _draggedPoint = clickedPoint;

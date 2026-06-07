@@ -273,6 +273,14 @@ const PlanEditor = (() => {
                       }
                     }
                  }
+              },
+              onRoomClosed: (roomId) => {
+                 const rooms = _dimensions.filter(d => d.id.startsWith('room_'));
+                 const currentIndex = rooms.findIndex(r => r.roomId == roomId);
+                 if (currentIndex >= 0 && currentIndex < rooms.length - 1) {
+                    const nextRoom = rooms[currentIndex + 1];
+                    window.setActiveRoomFromTable(nextRoom.roomId, nextRoom.color);
+                 }
               }
            });
         }
@@ -289,7 +297,14 @@ const PlanEditor = (() => {
              });
            }
         });
-      }, 100);
+        
+        // Auto-select first room
+        const firstRoom = _dimensions.find(d => d.id.startsWith('room_'));
+        if (firstRoom) {
+           window.setActiveRoomFromTable(firstRoom.roomId, firstRoom.color);
+        }
+
+      }, 500);
     }
   }
 
@@ -486,6 +501,11 @@ const PlanEditor = (() => {
     if (!_roomDetails.find(r => r.id == newId)) {
         _roomDetails.push({ id: newId, name: newDim.label, type: 'other', area: 0 });
     }
+    
+    // Auto-select the newly added room
+    setTimeout(() => {
+       window.setActiveRoomFromTable(newId, newColor);
+    }, 50);
   }
 
   return { init, confirm, reset, extractTextPositions, addManualRoom };
