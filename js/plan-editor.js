@@ -302,8 +302,9 @@ const PlanEditor = (() => {
            }
         });
         
-        // Auto-select first room
-        const firstRoom = _dimensions.find(d => d.id.startsWith('room_'));
+        // Auto-select Room 1 if it exists, otherwise first room
+        const rooms = _dimensions.filter(d => d.id.startsWith('room_'));
+        const firstRoom = rooms.find(d => d.roomId == "1") || rooms[0];
         if (firstRoom) {
            window.setActiveRoomFromTable(firstRoom.roomId, firstRoom.color);
         }
@@ -362,8 +363,14 @@ const PlanEditor = (() => {
       labelHtml = `<input type="text" id="dim_name_${d.id}" value="${d.label}" onclick="event.stopPropagation()" oninput="window.updateActiveRoomLabel('${d.roomId}', this.value)" style="flex:1; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:4px; padding:4px 8px; margin-right:8px; font-family:inherit; font-size:inherit;">`;
     }
 
+    let radioHtml = '';
+    if (isRoom) {
+      radioHtml = `<input type="radio" name="active_room_radio" id="radio_${d.roomId}" style="margin-right: 8px; cursor: pointer;" onclick="event.stopPropagation(); window.setActiveRoomFromTable('${d.roomId}', '${d.color}')">`;
+    }
+
     return `
       <div class="dim-row ${statusCls}" style="${colorStyle}" ${clickAttr} id="row_${d.id}">
+        ${radioHtml}
         <span class="dim-icon">${d.icon}</span>
         ${labelHtml}
         <div class="dim-right">
@@ -387,6 +394,10 @@ const PlanEditor = (() => {
     const row = document.getElementById(`row_room_${roomId}`);
     if (row) {
       row.style.backgroundColor = 'rgba(255,255,255,0.05)';
+    }
+    const radio = document.getElementById(`radio_${roomId}`);
+    if (radio) {
+      radio.checked = true;
     }
     
     let label = '';
