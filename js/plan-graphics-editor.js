@@ -22,7 +22,7 @@ const PlanGraphicsEditor = (() => {
   let _draggedPoint = null; // { roomId, pointIndex }
   let _hoveredPoint = null;
   
-  const CLOSE_DISTANCE = 15; // pixels distance to snap and close polygon
+  const CLOSE_DISTANCE = 8; // Reduced snap distance for precision
 
   function init({ containerId, canvas, onChange }) {
     _container = document.getElementById(containerId);
@@ -89,6 +89,35 @@ const PlanGraphicsEditor = (() => {
     _svg.addEventListener('mousedown', onMouseDown);
     _svg.addEventListener('mousemove', onMouseMove);
     _svg.addEventListener('mouseup', onMouseUp);
+    _svg.addEventListener('contextmenu', onContextMenu);
+    
+    // Add Undo button to container
+    const undoBtn = document.createElement('button');
+    undoBtn.innerHTML = '↶ Отменить точку (или Правый клик)';
+    undoBtn.style.position = 'absolute';
+    undoBtn.style.bottom = '20px';
+    undoBtn.style.left = '20px';
+    undoBtn.style.zIndex = '100';
+    undoBtn.style.background = 'rgba(0,0,0,0.7)';
+    undoBtn.style.color = '#fff';
+    undoBtn.style.border = '1px solid rgba(255,255,255,0.2)';
+    undoBtn.style.padding = '8px 12px';
+    undoBtn.style.borderRadius = '6px';
+    undoBtn.style.cursor = 'pointer';
+    undoBtn.onclick = undoLastPoint;
+    _container.appendChild(undoBtn);
+  }
+
+  function undoLastPoint() {
+    if (_activeRoomId && _roomsData[_activeRoomId] && !_roomsData[_activeRoomId].isClosed) {
+       _roomsData[_activeRoomId].points.pop();
+       redraw();
+    }
+  }
+
+  function onContextMenu(e) {
+    e.preventDefault(); // Prevent default right-click menu
+    undoLastPoint();
   }
 
   function getMouseCoords(e) {
@@ -103,6 +132,8 @@ const PlanGraphicsEditor = (() => {
   }
 
   function onMouseDown(e) {
+    if (e.button === 2) return; // Ignore right click (handled by contextmenu)
+
     if (!_activeRoomId) {
        alert("Пожалуйста, выберите комнату в таблице справа для отрисовки.");
        return;
@@ -111,33 +142,40 @@ const PlanGraphicsEditor = (() => {
     const pt = getMouseCoords(e);
     const room = _roomsData[_activeRoomId];
 
-    // Check if clicking on an existing point to drag
+    // Check snapping: 
+    // IF the polygon is not closed, we ONLY allow snapping to the FIRST point (index 0) of the ACTIVE room to close it.
+    // IF the polygon is closed, we allow snapping to ANY point of the active room to drag it.
     let clickedPoint = null;
-    for (const [rId, rData] of Object.entries(_roomsData)) {
-      for (let i = 0; i < rData.points.length; i++) {
-        const p = rData.points[i];
-        if (distance(pt, p) <= CLOSE_DISTANCE) {
-          clickedPoint = { roomId: rId, pointIndex: i };
-          break;
-        }
-      }
-      if (clickedPoint) break;
+    
+    if (!room.isClosed && room.points.length > 2) {
+       // Only snap to the first point to close
+       if (distance(pt, room.points[0]) <= CLOSE_DISTANCE) {
+          clickedPoint = { roomId: _activeRoomId, pointIndex: 0 };
+       }
+    } else if (room.isClosed) {
+       // Snap to any point of the closed room for dragging
+       for (let i = 0; i < room.points.length; i++) {
+         if (distance(pt, room.points[i]) <= CLOSE_DISTANCE) {
+           clickedPoint = { roomId: _activeRoomId, pointIndex: i };
+           break;
+         }
+       }
     }
 
     if (clickedPoint) {
-      // Start dragging a point
-      _draggedPoint = clickedPoint;
-      
       // If we clicked the FIRST point of the ACTIVE room, and it's NOT closed, we close it
-      if (clickedPoint.roomId === _activeRoomId && clickedPoint.pointIndex === 0 && !room.isClosed && room.points.length > 2) {
+      if (clickedPoint.pointIndex === 0 && !room.isClosed) {
          room.isClosed = true;
          _draggedPoint = null; // Don't drag on close click
          redraw();
+      } else {
+         // Start dragging a point
+         _draggedPoint = clickedPoint;
       }
       return;
     }
 
-    // If active room polygon is not closed, add a point
+    // If active room polygon is not closed, add a new point
     if (!room.isClosed) {
       room.points.push({ x: pt.x, y: pt.y });
       redraw();
@@ -157,19 +195,27 @@ const PlanGraphicsEditor = (() => {
 
     // Hover logic (cursor change)
     let hovered = false;
-    for (const [rId, rData] of Object.entries(_roomsData)) {
-      for (let i = 0; i < rData.points.length; i++) {
-        const p = rData.points[i];
-        if (distance(pt, p) <= CLOSE_DISTANCE) {
-          hovered = true;
-          break;
-        }
-      }
-      if (hovered) break;
+    const room = _roomsData[_activeRoomId];
+    
+    if (room) {
+       if (!room.isClosed && room.points.length > 2) {
+          // Hover over first point to close
+          if (distance(pt, room.points[0]) <= CLOSE_DISTANCE) {
+             hovered = true;
+          }
+       } else if (room.isClosed) {
+          // Hover over any point of the active closed room
+          for (let i = 0; i < room.points.length; i++) {
+             if (distance(pt, room.points[i]) <= CLOSE_DISTANCE) {
+                hovered = true;
+                break;
+             }
+          }
+       }
     }
     
     if (hovered) {
-      _svg.style.cursor = 'grab';
+      _svg.style.cursor = 'pointer';
     } else {
       _svg.style.cursor = _activeRoomId && !_roomsData[_activeRoomId]?.isClosed ? 'crosshair' : 'default';
     }

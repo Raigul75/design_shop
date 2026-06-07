@@ -191,7 +191,7 @@ const PlanEditor = (() => {
             📐 Шаг 2 — Редактор планировки
           </div>
           <div class="plan-editor-subtitle">
-            Проверьте считанные размеры и уточните недостающие данные
+            Проверьте считанные размеры. Если данные не считались или считались неверно, <b>введите номер и площадь вручную согласно паспорту БТИ</b>.
             ${totalMissing > 0
               ? `<span class="plan-editor-badge missing">${totalMissing} не заполнено</span>`
               : `<span class="plan-editor-badge ok">Все данные получены ✓</span>`
@@ -221,6 +221,10 @@ const PlanEditor = (() => {
             <div class="plan-editor-dims" id="planEditorDims">
               ${buildDimsHTML()}
             </div>
+            
+            <button class="plan-editor-add-btn" onclick="PlanEditor.addManualRoom()" style="background: rgba(255,255,255,0.1); border: 1px dashed rgba(255,255,255,0.3); color: #fff; border-radius: 6px; padding: 6px 12px; margin-top: 8px; cursor: pointer; width: 100%; text-align: center;">
+              + Добавить помещение
+            </button>
 
             <div class="plan-editor-section-title" style="margin-top:18px">🏗️ Конструктивные элементы</div>
             <div class="plan-editor-dims" id="planEditorArch">
@@ -372,25 +376,20 @@ const PlanEditor = (() => {
       if (!el) return;
       const val = el.value.trim();
       if (!val) return;
-
-      switch(d.id) {
-        case 'ceiling_height': updated.ceilingHeight = parseFloat(val);    break;
-        case 'window_width':   updated.windowWidth   = parseFloat(val);    break;
-        case 'window_height':  updated.windowHeight  = parseFloat(val);    break;
-        case 'door_width':     updated.doorWidth     = parseFloat(val);    break;
-        case 'entrance_width': updated.entranceWidth = parseFloat(val);    break;
-        case 'column_size':    updated.columnSize    = val; updated.hasColumns = true; break;
-        case 'shaft_main':     updated.shaftMain     = val; updated.hasShafts  = true; break;
-        case 'shaft_bath':     updated.shaftBath     = val; updated.hasShafts  = true; break;
-      }
-
-      // Room area override
+      
+      const num = parseFloat(val);
       if (d.id.startsWith('room_')) {
-        const numVal = parseFloat(val);
-        if (numVal > 0 && _roomDetails) {
-          const room = _roomDetails.find(r => `room_${r.id}` === d.id);
-          if (room) room.area = numVal;
+        let rd = _roomDetails.find(r => r.id == d.roomId);
+        if (!rd) {
+           rd = { id: d.roomId, name: d.label, type: 'other', area: 0 };
+           _roomDetails.push(rd);
         }
+        rd.area = num;
+      } else {
+        if (d.id === 'ceiling_height') updated.ceilingHeight = num;
+        if (d.id === 'window_width')   updated.windowWidth   = num;
+        if (d.id === 'window_height')  updated.windowHeight  = num;
+        if (d.id === 'door_width')     updated.doorWidth     = num;
       }
     });
 
@@ -420,6 +419,39 @@ const PlanEditor = (() => {
     _svgOverlay  = null;
   }
 
-  return { init, confirm, reset, extractTextPositions };
+  /* ── Add Manual Room ──────────── */
+  function addManualRoom() {
+    const rooms = _dimensions.filter(d => d.id.startsWith('room_'));
+    const newId = rooms.length > 0 ? Math.max(...rooms.map(r => parseInt(r.roomId) || 0)) + 1 : 1;
+    
+    const colors = ['#e74c3c', '#2ecc71', '#3498db', '#9b59b6', '#f1c40f', '#e67e22', '#1abc9c', '#34495e'];
+    const newColor = colors[(newId - 1) % colors.length];
+
+    const newDim = {
+      id:       `room_${newId}`,
+      label:    `${newId}) Помещение ${newId}`,
+      value:    null,
+      unit:     'м²',
+      required: false,
+      source:   'missing',
+      icon:     '📐',
+      roomId:   newId,
+      type:     'other',
+      color:    newColor
+    };
+    
+    _dimensions.splice(rooms.length, 0, newDim); // insert after existing rooms
+    
+    const dimsContainer = document.getElementById('planEditorDims');
+    if (dimsContainer) {
+       dimsContainer.innerHTML = buildDimsHTML();
+    }
+    
+    if (!_roomDetails.find(r => r.id == newId)) {
+        _roomDetails.push({ id: newId, name: newDim.label, type: 'other', area: 0 });
+    }
+  }
+
+  return { init, confirm, reset, extractTextPositions, addManualRoom };
 
 })();
