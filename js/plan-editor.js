@@ -228,6 +228,10 @@ const PlanEditor = (() => {
             </button>
 
             <div class="plan-editor-section-title" style="margin-top:18px">🏗️ Конструктивные элементы</div>
+            <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+              <button onclick="PlanEditor.setTool('door')" style="flex:1; background: rgba(243, 156, 18, 0.2); border: 1px solid #f39c12; color: #fff; border-radius: 6px; padding: 6px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(243, 156, 18, 0.4)'" onmouseout="this.style.background='rgba(243, 156, 18, 0.2)'">🚪 Двери</button>
+              <button onclick="PlanEditor.setTool('window')" style="flex:1; background: rgba(52, 152, 219, 0.2); border: 1px solid #3498db; color: #fff; border-radius: 6px; padding: 6px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(52, 152, 219, 0.4)'" onmouseout="this.style.background='rgba(52, 152, 219, 0.2)'">🪟 Окна</button>
+            </div>
             <div class="plan-editor-dims" id="planEditorArch">
               ${buildArchHTML()}
             </div>
@@ -508,6 +512,11 @@ const PlanEditor = (() => {
     }, 50);
   }
 
-  return { init, confirm, reset, extractTextPositions, addManualRoom };
+  function setTool(tool) {
+    if (typeof PlanGraphicsEditor !== 'undefined') {
+       PlanGraphicsEditor.setTool(tool);
+    }
+  }
 
+  return { init, confirm, reset, extractTextPositions, addManualRoom, setTool };
 })();

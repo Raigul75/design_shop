@@ -19,8 +19,14 @@ const PlanGraphicsEditor = (() => {
   let _roomsData = {};
   
   // Interaction state
-  let _draggedPoint = null; // { roomId, pointIndex }
+  let _currentTool = 'room'; // 'room' | 'door' | 'window'
+  let _draggedPoint = null; // { roomId, pointIndex } OR { type: 'door'|'window', index, point: 1|2 }
   let _hoveredPoint = null;
+  let _currentLineStart = null; // For doors/windows
+  
+  // Elements data
+  let _doorsData = [];
+  let _windowsData = [];
   
   const CLOSE_DISTANCE = 8; // Reduced snap distance for precision
 
@@ -34,6 +40,7 @@ const PlanGraphicsEditor = (() => {
   }
 
   function setActiveRoom(roomId, color, label) {
+    _currentTool = 'room'; // Switch back to room tool automatically
     _activeRoomId = roomId;
     _activeColor = color;
     _activeLabel = label;
@@ -46,15 +53,32 @@ const PlanGraphicsEditor = (() => {
       _roomsData[roomId].label = label;
     }
     
-    // Update indicator
-    const indicator = document.getElementById('graphicEditorActiveRoomIndicator');
-    if (indicator) {
-       indicator.style.display = 'block';
-       indicator.innerHTML = `<span style="display:inline-block; width:12px; height:12px; border-radius:50%; background-color:${color}; margin-right:8px; vertical-align:middle;"></span><span style="vertical-align:middle;">Выбрано: ${label}</span>`;
-       indicator.style.borderColor = color;
-    }
-    
+    updateIndicator();
     redraw();
+  }
+
+  function setTool(tool) {
+    _currentTool = tool;
+    _currentLineStart = null;
+    updateIndicator();
+    redraw();
+  }
+
+  function updateIndicator() {
+    const indicator = document.getElementById('graphicEditorActiveRoomIndicator');
+    if (!indicator) return;
+    
+    indicator.style.display = 'block';
+    if (_currentTool === 'room') {
+       indicator.innerHTML = `<span style="display:inline-block; width:12px; height:12px; border-radius:50%; background-color:${_activeColor}; margin-right:8px; vertical-align:middle;"></span><span style="vertical-align:middle;">Выбрано: ${_activeLabel}</span>`;
+       indicator.style.borderColor = _activeColor;
+    } else if (_currentTool === 'door') {
+       indicator.innerHTML = `<span style="display:inline-block; margin-right:8px; vertical-align:middle;">🚪</span><span style="vertical-align:middle;">Инструмент: Дверь</span>`;
+       indicator.style.borderColor = '#f39c12';
+    } else if (_currentTool === 'window') {
+       indicator.innerHTML = `<span style="display:inline-block; margin-right:8px; vertical-align:middle;">🪟</span><span style="vertical-align:middle;">Инструмент: Окно</span>`;
+       indicator.style.borderColor = '#3498db';
+    }
   }
 
   function renderCanvas() {
@@ -124,9 +148,25 @@ const PlanGraphicsEditor = (() => {
   }
 
   function undoLastPoint() {
-    if (_activeRoomId && _roomsData[_activeRoomId] && !_roomsData[_activeRoomId].isClosed) {
-       _roomsData[_activeRoomId].points.pop();
-       redraw();
+    if (_currentTool === 'room') {
+      if (_activeRoomId && _roomsData[_activeRoomId] && !_roomsData[_activeRoomId].isClosed) {
+         _roomsData[_activeRoomId].points.pop();
+         redraw();
+      }
+    } else if (_currentTool === 'door') {
+      if (_currentLineStart) {
+         _currentLineStart = null;
+      } else if (_doorsData.length > 0) {
+         _doorsData.pop();
+      }
+      redraw();
+    } else if (_currentTool === 'window') {
+      if (_currentLineStart) {
+         _currentLineStart = null;
+      } else if (_windowsData.length > 0) {
+         _windowsData.pop();
+      }
+      redraw();
     }
   }
 
@@ -149,56 +189,80 @@ const PlanGraphicsEditor = (() => {
   function onMouseDown(e) {
     if (e.button === 2) return; // Ignore right click (handled by contextmenu)
 
-    if (!_activeRoomId) {
-       alert("Пожалуйста, выберите комнату в таблице справа для отрисовки.");
-       return;
-    }
-
-    const pt = getMouseCoords(e);
-    const room = _roomsData[_activeRoomId];
-
-    // Check snapping: 
-    // IF the polygon is not closed, we ONLY allow snapping to the FIRST point (index 0) of the ACTIVE room to close it.
-    // IF the polygon is closed, we allow snapping to ANY point of the active room to drag it.
-    let clickedPoint = null;
-    
-    if (!room.isClosed && room.points.length > 2) {
-       // Only snap to the first point to close
-       if (distance(pt, room.points[0]) <= CLOSE_DISTANCE) {
-          clickedPoint = { roomId: _activeRoomId, pointIndex: 0 };
+    if (_currentTool === 'room') {
+       if (!_activeRoomId) {
+          alert("Пожалуйста, выберите комнату в таблице справа для отрисовки.");
+          return;
        }
-    } else if (room.isClosed) {
-       // Snap to any point of the closed room for dragging
-       for (let i = 0; i < room.points.length; i++) {
-         if (distance(pt, room.points[i]) <= CLOSE_DISTANCE) {
-           clickedPoint = { roomId: _activeRoomId, pointIndex: i };
-           break;
+
+       const room = _roomsData[_activeRoomId];
+
+       // Check snapping: 
+       // IF the polygon is not closed, we ONLY allow snapping to the FIRST point (index 0) of the ACTIVE room to close it.
+       // IF the polygon is closed, we allow snapping to ANY point of the active room to drag it.
+       let clickedPoint = null;
+       
+       if (!room.isClosed && room.points.length > 2) {
+          // Only snap to the first point to close
+          if (distance(pt, room.points[0]) <= CLOSE_DISTANCE) {
+             clickedPoint = { roomId: _activeRoomId, pointIndex: 0 };
+          }
+       } else if (room.isClosed) {
+          // Snap to any point of the closed room for dragging
+          for (let i = 0; i < room.points.length; i++) {
+            if (distance(pt, room.points[i]) <= CLOSE_DISTANCE) {
+              clickedPoint = { roomId: _activeRoomId, pointIndex: i };
+              break;
+            }
+          }
+       }
+
+       if (clickedPoint) {
+         // If we clicked the FIRST point of the ACTIVE room, and it's NOT closed, we close it
+         if (clickedPoint.pointIndex === 0 && !room.isClosed) {
+            room.isClosed = true;
+            _draggedPoint = null; // Don't drag on close click
+            redraw();
+            
+            // Trigger callback to auto-advance
+            if (_onRoomClosed && _activeRoomId) {
+               _onRoomClosed(_activeRoomId);
+            }
+         } else {
+            // Start dragging a point
+            _draggedPoint = clickedPoint;
          }
+         return;
        }
-    }
 
-    if (clickedPoint) {
-      // If we clicked the FIRST point of the ACTIVE room, and it's NOT closed, we close it
-      if (clickedPoint.pointIndex === 0 && !room.isClosed) {
-         room.isClosed = true;
-         _draggedPoint = null; // Don't drag on close click
+       // If active room polygon is not closed, add a new point
+       if (!room.isClosed) {
+         room.points.push({ x: pt.x, y: pt.y });
          redraw();
-         
-         // Trigger callback to auto-advance
-         if (_onRoomClosed && _activeRoomId) {
-            _onRoomClosed(_activeRoomId);
-         }
-      } else {
-         // Start dragging a point
-         _draggedPoint = clickedPoint;
-      }
-      return;
-    }
-
-    // If active room polygon is not closed, add a new point
-    if (!room.isClosed) {
-      room.points.push({ x: pt.x, y: pt.y });
-      redraw();
+       }
+       
+    } else if (_currentTool === 'door' || _currentTool === 'window') {
+       // Check if dragging an existing point
+       const dataArr = _currentTool === 'door' ? _doorsData : _windowsData;
+       for (let i = 0; i < dataArr.length; i++) {
+          if (distance(pt, dataArr[i].p1) <= CLOSE_DISTANCE) {
+             _draggedPoint = { type: _currentTool, index: i, point: 'p1' };
+             return;
+          }
+          if (distance(pt, dataArr[i].p2) <= CLOSE_DISTANCE) {
+             _draggedPoint = { type: _currentTool, index: i, point: 'p2' };
+             return;
+          }
+       }
+       
+       // If not dragging, handle line creation
+       if (!_currentLineStart) {
+          _currentLineStart = { x: pt.x, y: pt.y };
+       } else {
+          dataArr.push({ p1: _currentLineStart, p2: { x: pt.x, y: pt.y } });
+          _currentLineStart = null;
+          redraw();
+       }
     }
   }
 
@@ -207,29 +271,39 @@ const PlanGraphicsEditor = (() => {
 
     // Dragging logic
     if (_draggedPoint) {
-      const { roomId, pointIndex } = _draggedPoint;
-      _roomsData[roomId].points[pointIndex] = { x: pt.x, y: pt.y };
+      if (_draggedPoint.roomId) {
+         const { roomId, pointIndex } = _draggedPoint;
+         _roomsData[roomId].points[pointIndex] = { x: pt.x, y: pt.y };
+      } else if (_draggedPoint.type) {
+         const dataArr = _draggedPoint.type === 'door' ? _doorsData : _windowsData;
+         dataArr[_draggedPoint.index][_draggedPoint.point] = { x: pt.x, y: pt.y };
+      }
       redraw();
       return;
     }
 
     // Hover logic (cursor change)
     let hovered = false;
-    const room = _roomsData[_activeRoomId];
-    
-    if (room) {
-       if (!room.isClosed && room.points.length > 2) {
-          // Hover over first point to close
-          if (distance(pt, room.points[0]) <= CLOSE_DISTANCE) {
-             hovered = true;
-          }
-       } else if (room.isClosed) {
-          // Hover over any point of the active closed room
-          for (let i = 0; i < room.points.length; i++) {
-             if (distance(pt, room.points[i]) <= CLOSE_DISTANCE) {
-                hovered = true;
-                break;
+    if (_currentTool === 'room') {
+       const room = _roomsData[_activeRoomId];
+       if (room) {
+          if (!room.isClosed && room.points.length > 2) {
+             if (distance(pt, room.points[0]) <= CLOSE_DISTANCE) hovered = true;
+          } else if (room.isClosed) {
+             for (let i = 0; i < room.points.length; i++) {
+                if (distance(pt, room.points[i]) <= CLOSE_DISTANCE) {
+                   hovered = true;
+                   break;
+                }
              }
+          }
+       }
+    } else {
+       const dataArr = _currentTool === 'door' ? _doorsData : _windowsData;
+       for (let i = 0; i < dataArr.length; i++) {
+          if (distance(pt, dataArr[i].p1) <= CLOSE_DISTANCE || distance(pt, dataArr[i].p2) <= CLOSE_DISTANCE) {
+             hovered = true;
+             break;
           }
        }
     }
@@ -237,12 +311,14 @@ const PlanGraphicsEditor = (() => {
     if (hovered) {
       _svg.style.cursor = 'pointer';
     } else {
-      _svg.style.cursor = _activeRoomId && !_roomsData[_activeRoomId]?.isClosed ? 'crosshair' : 'default';
+      _svg.style.cursor = 'crosshair';
     }
 
     // Draw dynamic line from last point to mouse cursor if not closed
-    if (_activeRoomId && _roomsData[_activeRoomId] && !_roomsData[_activeRoomId].isClosed && _roomsData[_activeRoomId].points.length > 0) {
+    if (_currentTool === 'room' && _activeRoomId && _roomsData[_activeRoomId] && !_roomsData[_activeRoomId].isClosed && _roomsData[_activeRoomId].points.length > 0) {
        redraw(pt); // pass current mouse pos to draw temporary line
+    } else if ((_currentTool === 'door' || _currentTool === 'window') && _currentLineStart) {
+       redraw(pt);
     }
   }
 
@@ -353,6 +429,118 @@ const PlanGraphicsEditor = (() => {
 
       _svg.appendChild(group);
     }
+    
+    // Draw Windows
+    _windowsData.forEach((w, idx) => {
+       const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+       const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+       line.setAttribute('x1', w.p1.x);
+       line.setAttribute('y1', w.p1.y);
+       line.setAttribute('x2', w.p2.x);
+       line.setAttribute('y2', w.p2.y);
+       line.setAttribute('stroke', '#3498db');
+       line.setAttribute('stroke-width', '8');
+       line.setAttribute('stroke-linecap', 'round');
+       group.appendChild(line);
+       
+       // Nodes
+       [w.p1, w.p2].forEach(p => {
+          const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          circle.setAttribute('cx', p.x);
+          circle.setAttribute('cy', p.y);
+          circle.setAttribute('r', '6');
+          circle.setAttribute('fill', '#fff');
+          circle.setAttribute('stroke', '#3498db');
+          circle.setAttribute('stroke-width', '2');
+          circle.style.cursor = 'grab';
+          group.appendChild(circle);
+       });
+       
+       // Icon
+       const cx = (w.p1.x + w.p2.x)/2;
+       const cy = (w.p1.y + w.p2.y)/2;
+       const textBg = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+       textBg.setAttribute('cx', cx);
+       textBg.setAttribute('cy', cy);
+       textBg.setAttribute('r', '12');
+       textBg.setAttribute('fill', '#fff');
+       textBg.setAttribute('stroke', '#3498db');
+       textBg.setAttribute('stroke-width', '2');
+       const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+       text.setAttribute('x', cx);
+       text.setAttribute('y', cy + 1);
+       text.setAttribute('text-anchor', 'middle');
+       text.setAttribute('alignment-baseline', 'middle');
+       text.setAttribute('font-size', '14');
+       text.setAttribute('pointer-events', 'none');
+       text.textContent = '🪟';
+       group.appendChild(textBg);
+       group.appendChild(text);
+       _svg.appendChild(group);
+    });
+
+    // Draw Doors
+    _doorsData.forEach((d, idx) => {
+       const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+       const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+       line.setAttribute('x1', d.p1.x);
+       line.setAttribute('y1', d.p1.y);
+       line.setAttribute('x2', d.p2.x);
+       line.setAttribute('y2', d.p2.y);
+       line.setAttribute('stroke', '#f39c12');
+       line.setAttribute('stroke-width', '8');
+       line.setAttribute('stroke-linecap', 'round');
+       group.appendChild(line);
+       
+       // Nodes
+       [d.p1, d.p2].forEach(p => {
+          const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          circle.setAttribute('cx', p.x);
+          circle.setAttribute('cy', p.y);
+          circle.setAttribute('r', '6');
+          circle.setAttribute('fill', '#fff');
+          circle.setAttribute('stroke', '#f39c12');
+          circle.setAttribute('stroke-width', '2');
+          circle.style.cursor = 'grab';
+          group.appendChild(circle);
+       });
+       
+       // Icon
+       const cx = (d.p1.x + d.p2.x)/2;
+       const cy = (d.p1.y + d.p2.y)/2;
+       const textBg = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+       textBg.setAttribute('cx', cx);
+       textBg.setAttribute('cy', cy);
+       textBg.setAttribute('r', '12');
+       textBg.setAttribute('fill', '#fff');
+       textBg.setAttribute('stroke', '#f39c12');
+       textBg.setAttribute('stroke-width', '2');
+       const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+       text.setAttribute('x', cx);
+       text.setAttribute('y', cy + 1);
+       text.setAttribute('text-anchor', 'middle');
+       text.setAttribute('alignment-baseline', 'middle');
+       text.setAttribute('font-size', '14');
+       text.setAttribute('pointer-events', 'none');
+       text.textContent = '🚪';
+       group.appendChild(textBg);
+       group.appendChild(text);
+       _svg.appendChild(group);
+    });
+
+    // Temporary line for doors/windows
+    if ((_currentTool === 'door' || _currentTool === 'window') && _currentLineStart && mousePt) {
+       const color = _currentTool === 'door' ? '#f39c12' : '#3498db';
+       const tempLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+       tempLine.setAttribute('x1', _currentLineStart.x);
+       tempLine.setAttribute('y1', _currentLineStart.y);
+       tempLine.setAttribute('x2', mousePt.x);
+       tempLine.setAttribute('y2', mousePt.y);
+       tempLine.setAttribute('stroke', color);
+       tempLine.setAttribute('stroke-width', '4');
+       tempLine.setAttribute('stroke-dasharray', '5,5');
+       _svg.appendChild(tempLine);
+    }
   }
 
   function updateRoomLabel(roomId, newLabel) {
@@ -369,5 +557,5 @@ const PlanGraphicsEditor = (() => {
     }
   }
 
-  return { init, setActiveRoom, updateRoomLabel };
+  return { init, setActiveRoom, setTool, updateRoomLabel };
 })();
