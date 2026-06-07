@@ -334,12 +334,18 @@ const PlanEditor = (() => {
     }
 
     const colorStyle = isRoom && d.color ? `border-left: 4px solid ${d.color}; padding-left: 10px; cursor: pointer;` : '';
-    const clickAttr = isRoom && d.color ? `onclick="window.setActiveRoomFromTable('${d.roomId}', '${d.color}', '${d.label}')"` : '';
+    const clickAttr = isRoom && d.color ? `onclick="window.setActiveRoomFromTable('${d.roomId}', '${d.color}')"` : '';
+
+    let labelHtml = `<span class="dim-label" style="flex:1;">${d.label}</span>`;
+    if (isRoom) {
+      // Prevent click from row bubbling when clicking the input
+      labelHtml = `<input type="text" id="dim_name_${d.id}" value="${d.label}" onclick="event.stopPropagation()" oninput="window.updateActiveRoomLabel('${d.roomId}', this.value)" style="flex:1; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:4px; padding:4px 8px; margin-right:8px; font-family:inherit; font-size:inherit;">`;
+    }
 
     return `
       <div class="dim-row ${statusCls}" style="${colorStyle}" ${clickAttr} id="row_${d.id}">
         <span class="dim-icon">${d.icon}</span>
-        <span class="dim-label" style="flex:1;">${d.label}</span>
+        ${labelHtml}
         <div class="dim-right">
           ${inputHtml}
           ${statusTxt}
@@ -347,8 +353,14 @@ const PlanEditor = (() => {
       </div>`;
   }
   
+  window.updateActiveRoomLabel = function(roomId, newLabel) {
+     if (typeof PlanGraphicsEditor !== 'undefined') {
+        PlanGraphicsEditor.updateRoomLabel(roomId, newLabel);
+     }
+  };
+
   // Global handler for clicking on table row
-  window.setActiveRoomFromTable = function(roomId, color, label) {
+  window.setActiveRoomFromTable = function(roomId, color) {
     document.querySelectorAll('.dim-row').forEach(row => {
       row.style.backgroundColor = 'transparent';
     });
@@ -356,6 +368,11 @@ const PlanEditor = (() => {
     if (row) {
       row.style.backgroundColor = 'rgba(255,255,255,0.05)';
     }
+    
+    let label = '';
+    const nameInput = document.getElementById(`dim_name_room_${roomId}`);
+    if (nameInput) label = nameInput.value;
+
     if (typeof PlanGraphicsEditor !== 'undefined') {
        PlanGraphicsEditor.setActiveRoom(roomId, color, label);
     }
@@ -379,12 +396,16 @@ const PlanEditor = (() => {
       
       const num = parseFloat(val);
       if (d.id.startsWith('room_')) {
+        let nameEl = document.getElementById(`dim_name_${d.id}`);
+        let newName = nameEl ? nameEl.value.trim() : d.label;
+        
         let rd = _roomDetails.find(r => r.id == d.roomId);
         if (!rd) {
-           rd = { id: d.roomId, name: d.label, type: 'other', area: 0 };
+           rd = { id: d.roomId, name: newName, type: 'other', area: 0 };
            _roomDetails.push(rd);
         }
         rd.area = num;
+        rd.name = newName;
       } else {
         if (d.id === 'ceiling_height') updated.ceilingHeight = num;
         if (d.id === 'window_width')   updated.windowWidth   = num;

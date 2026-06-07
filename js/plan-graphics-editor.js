@@ -91,21 +91,8 @@ const PlanGraphicsEditor = (() => {
     _svg.addEventListener('mouseup', onMouseUp);
     _svg.addEventListener('contextmenu', onContextMenu);
     
-    // Add Undo button to container
-    const undoBtn = document.createElement('button');
-    undoBtn.innerHTML = '↶ Отменить точку (или Правый клик)';
-    undoBtn.style.position = 'absolute';
-    undoBtn.style.bottom = '20px';
-    undoBtn.style.left = '20px';
-    undoBtn.style.zIndex = '100';
-    undoBtn.style.background = 'rgba(0,0,0,0.7)';
-    undoBtn.style.color = '#fff';
-    undoBtn.style.border = '1px solid rgba(255,255,255,0.2)';
-    undoBtn.style.padding = '8px 12px';
-    undoBtn.style.borderRadius = '6px';
-    undoBtn.style.cursor = 'pointer';
-    undoBtn.onclick = undoLastPoint;
-    _container.appendChild(undoBtn);
+    // Note: Removed the large visual "Undo" button because it blocked the view.
+    // Undo is now purely right-click.
   }
 
   function undoLastPoint() {
@@ -335,5 +322,15 @@ const PlanGraphicsEditor = (() => {
     }
   }
 
-  return { init, setActiveRoom };
+  function updateRoomLabel(roomId, newLabel) {
+    if (_roomsData[roomId]) {
+      _roomsData[roomId].label = newLabel;
+      if (roomId === _activeRoomId) {
+        _activeLabel = newLabel;
+      }
+      redraw();
+    }
+  }
+
+  return { init, setActiveRoom, updateRoomLabel };
 })();
