@@ -95,6 +95,18 @@ const PlanGraphicsEditor = (() => {
     // Use crosshair when drawing
     _container.style.cursor = 'crosshair';
 
+    // Inner container for zooming
+    const inner = document.createElement('div');
+    inner.id = 'graphicEditorInner';
+    inner.style.position = 'absolute';
+    inner.style.top = '0';
+    inner.style.left = '0';
+    inner.style.width = _canvas.width + 'px';
+    inner.style.height = _canvas.height + 'px';
+    inner.style.transformOrigin = 'top left';
+    inner.style.transition = 'transform 0.2s';
+    _container.appendChild(inner);
+
     // Background layer (PDF)
     _img = document.createElement('img');
     try {
@@ -105,7 +117,7 @@ const PlanGraphicsEditor = (() => {
     _img.style.left = '0';
     _img.style.pointerEvents = 'none';
     _img.style.filter = 'grayscale(100%) contrast(1.2) opacity(0.8)';
-    _container.appendChild(_img);
+    inner.appendChild(_img);
 
     // SVG Layer
     _svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -116,7 +128,7 @@ const PlanGraphicsEditor = (() => {
     _svg.style.width = _canvas.width + 'px';
     _svg.style.height = _canvas.height + 'px';
     
-    _container.appendChild(_svg);
+    inner.appendChild(_svg);
 
     // Mouse events
     _svg.addEventListener('mousedown', onMouseDown);
@@ -143,8 +155,50 @@ const PlanGraphicsEditor = (() => {
     indicator.style.boxShadow = '0 4px 12px rgba(0,0,0,0.5)';
     _container.appendChild(indicator);
     
-    // Note: Removed the large visual "Undo" button because it blocked the view.
-    // Undo is now purely right-click.
+    // Zoom Controls
+    const zoomControls = document.createElement('div');
+    zoomControls.style.position = 'absolute';
+    zoomControls.style.bottom = '10px';
+    zoomControls.style.right = '20px';
+    zoomControls.style.display = 'flex';
+    zoomControls.style.gap = '8px';
+    zoomControls.style.zIndex = '10';
+    
+    const zoomInBtn = document.createElement('button');
+    zoomInBtn.innerHTML = '🔍 +';
+    zoomInBtn.style.padding = '8px 12px';
+    zoomInBtn.style.background = 'rgba(255,255,255,0.1)';
+    zoomInBtn.style.color = '#fff';
+    zoomInBtn.style.border = '1px solid rgba(255,255,255,0.2)';
+    zoomInBtn.style.borderRadius = '6px';
+    zoomInBtn.style.cursor = 'pointer';
+    zoomInBtn.onclick = () => setZoom(0.2);
+    
+    const zoomOutBtn = document.createElement('button');
+    zoomOutBtn.innerHTML = '🔍 -';
+    zoomOutBtn.style.padding = '8px 12px';
+    zoomOutBtn.style.background = 'rgba(255,255,255,0.1)';
+    zoomOutBtn.style.color = '#fff';
+    zoomOutBtn.style.border = '1px solid rgba(255,255,255,0.2)';
+    zoomOutBtn.style.borderRadius = '6px';
+    zoomOutBtn.style.cursor = 'pointer';
+    zoomOutBtn.onclick = () => setZoom(-0.2);
+    
+    zoomControls.appendChild(zoomOutBtn);
+    zoomControls.appendChild(zoomInBtn);
+    _container.appendChild(zoomControls);
+  }
+
+  let _zoomLevel = 1;
+  function setZoom(delta) {
+     _zoomLevel += delta;
+     if (_zoomLevel < 0.5) _zoomLevel = 0.5;
+     if (_zoomLevel > 3) _zoomLevel = 3;
+     
+     const inner = document.getElementById('graphicEditorInner');
+     if (inner) {
+        inner.style.transform = `scale(${_zoomLevel})`;
+     }
   }
 
   function undoLastPoint() {

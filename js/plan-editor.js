@@ -90,11 +90,11 @@ const PlanEditor = (() => {
     sorted.forEach(r => {
       dims.push({
         id:       `room_${r.id}`,
-        label:    `${r.id}) ${r.nameRu || r.name}`,
-        value:    r.area > 0 ? r.area : null,
+        label:    '',
+        value:    null,
         unit:     'м²',
         required: false,
-        source:   r.area > 0 ? 'bti' : 'missing',
+        source:   'missing',
         icon:     typeIconMap[r.type] || '📐',
         roomId:   r.id,
         type:     r.type,
@@ -360,7 +360,7 @@ const PlanEditor = (() => {
     let labelHtml = `<span class="dim-label" style="flex:1;">${d.label}</span>`;
     if (isRoom) {
       // Prevent click from row bubbling when clicking the input
-      labelHtml = `<input type="text" id="dim_name_${d.id}" value="${d.label}" onclick="event.stopPropagation()" oninput="window.updateActiveRoomLabel('${d.roomId}', this.value)" style="flex:1; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:4px; padding:4px 8px; margin-right:8px; font-family:inherit; font-size:inherit;">`;
+      labelHtml = `<span style="color:#fff; font-weight:bold; margin-right:8px; display:flex; align-items:center;">${d.roomId})</span><input type="text" id="dim_name_${d.id}" value="${d.label}" onclick="event.stopPropagation()" oninput="window.updateActiveRoomLabel('${d.roomId}', this.value)" style="flex:1; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:4px; padding:4px 8px; margin-right:8px; font-family:inherit; font-size:inherit;" placeholder="Название...">`;
     }
 
     let radioHtml = '';
