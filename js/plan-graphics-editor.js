@@ -453,28 +453,28 @@ const PlanGraphicsEditor = (() => {
             cx /= room.points.length;
             cy /= room.points.length;
             
-            const textBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            const textBg = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
             const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
             text.setAttribute('x', cx);
-            text.setAttribute('y', cy);
+            text.setAttribute('y', cy + 1); // Slight vertical offset for better centering
             text.setAttribute('text-anchor', 'middle');
             text.setAttribute('alignment-baseline', 'middle');
             text.setAttribute('fill', '#fff');
             text.setAttribute('font-size', '14');
             text.setAttribute('font-weight', 'bold');
             text.setAttribute('pointer-events', 'none');
-            text.textContent = room.label;
             
-            // Background pill for text
-            textBg.setAttribute('fill', '#000');
-            textBg.setAttribute('fill-opacity', '0.6');
-            textBg.setAttribute('rx', '4');
-            // Estimate width
-            const tw = room.label.length * 8 + 10;
-            textBg.setAttribute('x', cx - tw/2);
-            textBg.setAttribute('y', cy - 12);
-            textBg.setAttribute('width', tw);
-            textBg.setAttribute('height', '24');
+            // Only show the room number instead of full label to save space
+            text.textContent = roomId;
+            
+            // Background circle
+            textBg.setAttribute('cx', cx);
+            textBg.setAttribute('cy', cy);
+            textBg.setAttribute('r', '12');
+            textBg.setAttribute('fill', room.color);
+            textBg.setAttribute('fill-opacity', '0.9');
+            textBg.setAttribute('stroke', '#fff');
+            textBg.setAttribute('stroke-width', '2');
             textBg.setAttribute('pointer-events', 'none');
             
             group.appendChild(textBg);
