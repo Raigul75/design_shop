@@ -221,9 +221,15 @@ const PlanGraphicsEditor = (() => {
 
   function undoLastPoint() {
     if (_currentTool === 'room') {
-      if (_activeRoomId && _roomsData[_activeRoomId] && !_roomsData[_activeRoomId].isClosed) {
-         _roomsData[_activeRoomId].points.pop();
-         redraw();
+      if (_activeRoomId && _roomsData[_activeRoomId]) {
+         const room = _roomsData[_activeRoomId];
+         if (room.isClosed) {
+             room.isClosed = false;
+             redraw();
+         } else if (room.points.length > 0) {
+             room.points.pop();
+             redraw();
+         }
       }
     } else if (_currentTool === 'door') {
       if (_currentLineStart) {
@@ -246,6 +252,12 @@ const PlanGraphicsEditor = (() => {
     e.preventDefault(); // Prevent default right-click menu
     undoLastPoint();
   }
+  
+  document.addEventListener('keydown', (e) => {
+     if (e.key === 'Escape') {
+        undoLastPoint();
+     }
+  });
 
   function getMouseCoords(e) {
     const pt = _svg.createSVGPoint();
@@ -259,18 +271,41 @@ const PlanGraphicsEditor = (() => {
   }
 
   // Applies orthogonal snapping (horizontal or vertical) relative to last point
-  function applyOrtho(pt, lastPt, e) {
+  // Also snaps to alignment of existing room points (like the first point) to perfectly close rectangles
+  function applyOrtho(pt, lastPt, e, roomPoints = null) {
      if (e && e.shiftKey) return { x: pt.x, y: pt.y }; // Hold Shift to draw freely
      
      const dx = Math.abs(pt.x - lastPt.x);
      const dy = Math.abs(pt.y - lastPt.y);
      
+     let snappedPt = { x: pt.x, y: pt.y };
+     
      // Snap to the longest axis
      if (dx > dy) {
-         return { x: pt.x, y: lastPt.y };
+         snappedPt.y = lastPt.y;
      } else {
-         return { x: lastPt.x, y: pt.y };
+         snappedPt.x = lastPt.x;
      }
+     
+     // Alignment snapping to existing points
+     if (roomPoints && roomPoints.length > 0) {
+         const ALIGN_DIST = 10; // Threshold for alignment
+         for (let i = 0; i < roomPoints.length; i++) {
+             if (dx > dy) {
+                 // Moving horizontally, snap X to existing points
+                 if (Math.abs(snappedPt.x - roomPoints[i].x) < ALIGN_DIST) {
+                     snappedPt.x = roomPoints[i].x;
+                 }
+             } else {
+                 // Moving vertically, snap Y to existing points
+                 if (Math.abs(snappedPt.y - roomPoints[i].y) < ALIGN_DIST) {
+                     snappedPt.y = roomPoints[i].y;
+                 }
+             }
+         }
+     }
+     
+     return snappedPt;
   }
 
   function onMouseDown(e) {
@@ -328,7 +363,7 @@ const PlanGraphicsEditor = (() => {
          let newPt = { x: pt.x, y: pt.y };
          if (room.points.length > 0) {
             const lastPt = room.points[room.points.length - 1];
-            newPt = applyOrtho(newPt, lastPt, e);
+            newPt = applyOrtho(newPt, lastPt, e, room.points);
          }
          room.points.push(newPt);
          redraw();
@@ -412,7 +447,7 @@ const PlanGraphicsEditor = (() => {
     if (_currentTool === 'room' && _activeRoomId && _roomsData[_activeRoomId] && !_roomsData[_activeRoomId].isClosed && _roomsData[_activeRoomId].points.length > 0) {
        const room = _roomsData[_activeRoomId];
        const lastPt = room.points[room.points.length - 1];
-       const drawPt = applyOrtho({ x: pt.x, y: pt.y }, lastPt, e);
+       const drawPt = applyOrtho({ x: pt.x, y: pt.y }, lastPt, e, room.points);
        redraw(drawPt);
     } else if ((_currentTool === 'door' || _currentTool === 'window') && _currentLineStart) {
        const drawPt = applyOrtho({ x: pt.x, y: pt.y }, _currentLineStart, e);
@@ -503,10 +538,10 @@ const PlanGraphicsEditor = (() => {
          const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
          circle.setAttribute('cx', p.x);
          circle.setAttribute('cy', p.y);
-         circle.setAttribute('r', '5');
+         circle.setAttribute('r', '3'); // Smaller points
          circle.setAttribute('fill', '#fff');
          circle.setAttribute('stroke', room.color);
-         circle.setAttribute('stroke-width', '2');
+         circle.setAttribute('stroke-width', '1.5');
          circle.style.cursor = 'grab';
          circle.style.pointerEvents = 'all';
          group.appendChild(circle);
