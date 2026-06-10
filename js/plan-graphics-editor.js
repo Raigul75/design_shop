@@ -242,6 +242,7 @@ const PlanGraphicsEditor = (() => {
 
   function onMouseDown(e) {
     if (e.button === 2) return; // Ignore right click (handled by contextmenu)
+    const pt = getMouseCoords(e);
 
     if (_currentTool === 'room') {
        if (!_activeRoomId) {
