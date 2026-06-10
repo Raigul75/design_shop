@@ -155,6 +155,24 @@ const PlanGraphicsEditor = (() => {
     indicator.style.boxShadow = '0 4px 12px rgba(0,0,0,0.5)';
     _container.appendChild(indicator);
     
+    // Floating tooltip for room hover
+    if (!document.getElementById('graphicEditorTooltip')) {
+       const tooltip = document.createElement('div');
+       tooltip.id = 'graphicEditorTooltip';
+       tooltip.style.position = 'fixed';
+       tooltip.style.pointerEvents = 'none';
+       tooltip.style.background = 'rgba(0,0,0,0.8)';
+       tooltip.style.color = '#fff';
+       tooltip.style.padding = '4px 8px';
+       tooltip.style.borderRadius = '4px';
+       tooltip.style.fontSize = '12px';
+       tooltip.style.fontWeight = 'bold';
+       tooltip.style.zIndex = '1000';
+       tooltip.style.display = 'none';
+       tooltip.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)';
+       document.body.appendChild(tooltip);
+    }
+    
     // Zoom Controls
     const zoomControls = document.createElement('div');
     zoomControls.style.position = 'absolute';
@@ -404,6 +422,25 @@ const PlanGraphicsEditor = (() => {
       // Semi-transparent fill
       if (room.isClosed) {
          shape.setAttribute('fill-opacity', '0.4');
+         shape.style.pointerEvents = 'visiblePainted';
+         
+         // Tooltip events
+         shape.onmousemove = (e) => {
+            const tooltip = document.getElementById('graphicEditorTooltip');
+            if (tooltip) {
+               tooltip.style.display = 'block';
+               tooltip.style.left = (e.clientX + 15) + 'px';
+               tooltip.style.top = (e.clientY + 15) + 'px';
+               tooltip.style.borderLeft = `4px solid ${room.color}`;
+               tooltip.textContent = `Помещение ${roomId}`;
+            }
+         };
+         shape.onmouseout = () => {
+            const tooltip = document.getElementById('graphicEditorTooltip');
+            if (tooltip) tooltip.style.display = 'none';
+         };
+      } else {
+         shape.style.pointerEvents = 'none';
       }
 
       group.appendChild(shape);
@@ -419,6 +456,7 @@ const PlanGraphicsEditor = (() => {
          tempLine.setAttribute('stroke', room.color);
          tempLine.setAttribute('stroke-width', '2');
          tempLine.setAttribute('stroke-dasharray', '5,5');
+         tempLine.style.pointerEvents = 'none';
          group.appendChild(tempLine);
          
          // Highlight first point if close enough to close polygon
@@ -430,6 +468,7 @@ const PlanGraphicsEditor = (() => {
             snapCircle.setAttribute('fill', 'none');
             snapCircle.setAttribute('stroke', '#fff');
             snapCircle.setAttribute('stroke-width', '2');
+            snapCircle.style.pointerEvents = 'none';
             group.appendChild(snapCircle);
          }
       }
@@ -444,42 +483,8 @@ const PlanGraphicsEditor = (() => {
          circle.setAttribute('stroke', room.color);
          circle.setAttribute('stroke-width', '2');
          circle.style.cursor = 'grab';
+         circle.style.pointerEvents = 'all';
          group.appendChild(circle);
-         
-         // Draw label at the center of polygon (approximated by average of points)
-         if (room.isClosed && idx === room.points.length - 1) {
-            let cx = 0, cy = 0;
-            room.points.forEach(pt => { cx += pt.x; cy += pt.y; });
-            cx /= room.points.length;
-            cy /= room.points.length;
-            
-            const textBg = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            text.setAttribute('x', cx);
-            text.setAttribute('y', cy + 1); // Slight vertical offset for better centering
-            text.setAttribute('text-anchor', 'middle');
-            text.setAttribute('alignment-baseline', 'middle');
-            text.setAttribute('fill', '#fff');
-            text.setAttribute('font-size', '14');
-            text.setAttribute('font-weight', 'bold');
-            text.setAttribute('pointer-events', 'none');
-            
-            // Only show the room number instead of full label to save space
-            text.textContent = roomId;
-            
-            // Background circle
-            textBg.setAttribute('cx', cx);
-            textBg.setAttribute('cy', cy);
-            textBg.setAttribute('r', '12');
-            textBg.setAttribute('fill', room.color);
-            textBg.setAttribute('fill-opacity', '0.9');
-            textBg.setAttribute('stroke', '#fff');
-            textBg.setAttribute('stroke-width', '2');
-            textBg.setAttribute('pointer-events', 'none');
-            
-            group.appendChild(textBg);
-            group.appendChild(text);
-         }
       });
 
       _svg.appendChild(group);
