@@ -289,7 +289,7 @@ const PlanGraphicsEditor = (() => {
      
      // Alignment snapping to existing points
      if (roomPoints && roomPoints.length > 0) {
-         const ALIGN_DIST = 10; // Threshold for alignment
+         const ALIGN_DIST = 20; // Increased threshold for alignment
          for (let i = 0; i < roomPoints.length; i++) {
              if (dx > dy) {
                  // Moving horizontally, snap X to existing points
@@ -447,7 +447,14 @@ const PlanGraphicsEditor = (() => {
     if (_currentTool === 'room' && _activeRoomId && _roomsData[_activeRoomId] && !_roomsData[_activeRoomId].isClosed && _roomsData[_activeRoomId].points.length > 0) {
        const room = _roomsData[_activeRoomId];
        const lastPt = room.points[room.points.length - 1];
-       const drawPt = applyOrtho({ x: pt.x, y: pt.y }, lastPt, e, room.points);
+       
+       let drawPt = { x: pt.x, y: pt.y };
+       // Visual snap to the first point when hovering to close the polygon
+       if (room.points.length > 2 && distance(pt, room.points[0]) <= CLOSE_DISTANCE) {
+           drawPt = { x: room.points[0].x, y: room.points[0].y };
+       } else {
+           drawPt = applyOrtho(drawPt, lastPt, e, room.points);
+       }
        redraw(drawPt);
     } else if ((_currentTool === 'door' || _currentTool === 'window') && _currentLineStart) {
        const drawPt = applyOrtho({ x: pt.x, y: pt.y }, _currentLineStart, e);
