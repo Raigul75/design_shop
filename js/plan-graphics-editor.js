@@ -180,15 +180,29 @@ const PlanGraphicsEditor = (() => {
        document.body.appendChild(tooltip);
     }
     
-    // Zoom Controls
+    addZoomControls();
+  }
+
+  function addZoomControls() {
     const zoomControls = document.createElement('div');
     zoomControls.style.position = 'absolute';
-    zoomControls.style.bottom = '10px';
+    zoomControls.style.bottom = '20px';
     zoomControls.style.right = '20px';
     zoomControls.style.display = 'flex';
-    zoomControls.style.gap = '8px';
-    zoomControls.style.zIndex = '10';
-    
+    zoomControls.style.gap = '10px';
+    zoomControls.style.zIndex = '100';
+
+    const undoBtn = document.createElement('button');
+    undoBtn.innerHTML = '↩ Отменить (Esc)';
+    undoBtn.style.padding = '8px 12px';
+    undoBtn.style.background = 'rgba(255,255,255,0.1)';
+    undoBtn.style.color = '#fff';
+    undoBtn.style.border = '1px solid rgba(255,255,255,0.2)';
+    undoBtn.style.borderRadius = '6px';
+    undoBtn.style.cursor = 'pointer';
+    undoBtn.onclick = () => undoLastPoint();
+    zoomControls.appendChild(undoBtn);
+
     const zoomInBtn = document.createElement('button');
     zoomInBtn.innerHTML = '🔍 +';
     zoomInBtn.style.padding = '8px 12px';
@@ -198,7 +212,7 @@ const PlanGraphicsEditor = (() => {
     zoomInBtn.style.borderRadius = '6px';
     zoomInBtn.style.cursor = 'pointer';
     zoomInBtn.onclick = () => setZoom(0.2);
-    
+
     const zoomOutBtn = document.createElement('button');
     zoomOutBtn.innerHTML = '🔍 -';
     zoomOutBtn.style.padding = '8px 12px';
@@ -261,7 +275,7 @@ const PlanGraphicsEditor = (() => {
   }
   
   document.addEventListener('keydown', (e) => {
-     if (e.key === 'Escape') {
+     if (e.key === 'Escape' || e.key === 'Esc' || e.keyCode === 27) {
         undoLastPoint();
      }
   });
