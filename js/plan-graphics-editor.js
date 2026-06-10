@@ -40,6 +40,13 @@ const PlanGraphicsEditor = (() => {
   }
 
   function setActiveRoom(roomId, color, label) {
+    // Auto-close previously active room if it was left unfinished
+    if (_activeRoomId && _activeRoomId !== roomId && _roomsData[_activeRoomId] && !_roomsData[_activeRoomId].isClosed) {
+       if (_roomsData[_activeRoomId].points.length > 2) {
+           _roomsData[_activeRoomId].isClosed = true;
+       }
+    }
+
     _currentTool = 'room'; // Switch back to room tool automatically
     _activeRoomId = roomId;
     _activeColor = color;
@@ -270,6 +277,14 @@ const PlanGraphicsEditor = (() => {
     return Math.sqrt((p1.x - p2.x)**2 + (p1.y - p2.y)**2);
   }
 
+  function getAllPoints() {
+     const pts = [];
+     for (const r of Object.values(_roomsData)) {
+         pts.push(...r.points);
+     }
+     return pts;
+  }
+
   // Applies orthogonal snapping (horizontal or vertical) relative to last point
   // Also snaps to alignment of existing room points (like the first point) to perfectly close rectangles
   function applyOrtho(pt, lastPt, e, roomPoints = null) {
@@ -363,7 +378,7 @@ const PlanGraphicsEditor = (() => {
          let newPt = { x: pt.x, y: pt.y };
          if (room.points.length > 0) {
             const lastPt = room.points[room.points.length - 1];
-            newPt = applyOrtho(newPt, lastPt, e, room.points);
+            newPt = applyOrtho(newPt, lastPt, e, getAllPoints());
          }
          room.points.push(newPt);
          redraw();
@@ -453,7 +468,7 @@ const PlanGraphicsEditor = (() => {
        if (room.points.length > 2 && distance(pt, room.points[0]) <= CLOSE_DISTANCE) {
            drawPt = { x: room.points[0].x, y: room.points[0].y };
        } else {
-           drawPt = applyOrtho(drawPt, lastPt, e, room.points);
+           drawPt = applyOrtho(drawPt, lastPt, e, getAllPoints());
        }
        redraw(drawPt);
     } else if ((_currentTool === 'door' || _currentTool === 'window') && _currentLineStart) {
@@ -549,8 +564,12 @@ const PlanGraphicsEditor = (() => {
          circle.setAttribute('fill', '#fff');
          circle.setAttribute('stroke', room.color);
          circle.setAttribute('stroke-width', '1.5');
-         circle.style.cursor = 'grab';
-         circle.style.pointerEvents = 'all';
+         if (roomId === _activeRoomId) {
+             circle.style.cursor = 'grab';
+             circle.style.pointerEvents = 'all';
+         } else {
+             circle.style.pointerEvents = 'none';
+         }
          group.appendChild(circle);
       });
 
