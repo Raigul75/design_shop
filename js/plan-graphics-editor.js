@@ -258,6 +258,21 @@ const PlanGraphicsEditor = (() => {
     return Math.sqrt((p1.x - p2.x)**2 + (p1.y - p2.y)**2);
   }
 
+  // Applies orthogonal snapping (horizontal or vertical) relative to last point
+  function applyOrtho(pt, lastPt, e) {
+     if (e && e.shiftKey) return { x: pt.x, y: pt.y }; // Hold Shift to draw freely
+     
+     const dx = Math.abs(pt.x - lastPt.x);
+     const dy = Math.abs(pt.y - lastPt.y);
+     
+     // Snap to the longest axis
+     if (dx > dy) {
+         return { x: pt.x, y: lastPt.y };
+     } else {
+         return { x: lastPt.x, y: pt.y };
+     }
+  }
+
   function onMouseDown(e) {
     if (e.button === 2) return; // Ignore right click (handled by contextmenu)
     const pt = getMouseCoords(e);
@@ -310,7 +325,12 @@ const PlanGraphicsEditor = (() => {
 
        // If active room polygon is not closed, add a new point
        if (!room.isClosed) {
-         room.points.push({ x: pt.x, y: pt.y });
+         let newPt = { x: pt.x, y: pt.y };
+         if (room.points.length > 0) {
+            const lastPt = room.points[room.points.length - 1];
+            newPt = applyOrtho(newPt, lastPt, e);
+         }
+         room.points.push(newPt);
          redraw();
        }
        
@@ -332,7 +352,8 @@ const PlanGraphicsEditor = (() => {
        if (!_currentLineStart) {
           _currentLineStart = { x: pt.x, y: pt.y };
        } else {
-          dataArr.push({ p1: _currentLineStart, p2: { x: pt.x, y: pt.y } });
+          const newPt = applyOrtho({ x: pt.x, y: pt.y }, _currentLineStart, e);
+          dataArr.push({ p1: _currentLineStart, p2: newPt });
           _currentLineStart = null;
           redraw();
        }
@@ -389,9 +410,13 @@ const PlanGraphicsEditor = (() => {
 
     // Draw dynamic line from last point to mouse cursor if not closed
     if (_currentTool === 'room' && _activeRoomId && _roomsData[_activeRoomId] && !_roomsData[_activeRoomId].isClosed && _roomsData[_activeRoomId].points.length > 0) {
-       redraw(pt); // pass current mouse pos to draw temporary line
+       const room = _roomsData[_activeRoomId];
+       const lastPt = room.points[room.points.length - 1];
+       const drawPt = applyOrtho({ x: pt.x, y: pt.y }, lastPt, e);
+       redraw(drawPt);
     } else if ((_currentTool === 'door' || _currentTool === 'window') && _currentLineStart) {
-       redraw(pt);
+       const drawPt = applyOrtho({ x: pt.x, y: pt.y }, _currentLineStart, e);
+       redraw(drawPt);
     }
   }
 
